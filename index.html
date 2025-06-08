@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>공격대 파티 최적화 도구</title>
+    <title>공격대 파티 최적화 도구 v15</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -14,12 +14,26 @@
             --primary-color: #3d8bfd;
             --primary-hover-color: #3478e1;
             --text-color: #333333;
+            --text-muted-color: #777;
             --border-color: #e0e0e0;
             --header-bg: #f8f9fa;
             --footer-bg: #f1f3f5;
             --dps-bg: #ffebee;
             --updoongie-bg: #e3f2fd;
             --buffer-bg: #e8f5e9;
+        }
+
+        body.dark-mode {
+            --bg-color: #121212;
+            --card-bg-color: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-muted-color: #888;
+            --border-color: #333;
+            --header-bg: #2a2a2a;
+            --footer-bg: #2c2c2c;
+            --dps-bg: #4a141c;
+            --updoongie-bg: #0d2c4a;
+            --buffer-bg: #133b1f;
         }
 
         body {
@@ -29,6 +43,7 @@
             margin: 0;
             padding: 20px;
             line-height: 1.7;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .main-container {
@@ -36,10 +51,11 @@
             margin: 20px auto;
             padding: 20px;
         }
-
+        
         header {
             text-align: center;
             margin-bottom: 40px;
+            position: relative;
         }
 
         h1 {
@@ -66,6 +82,7 @@
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             padding: 30px;
+            transition: background-color 0.3s;
         }
         
         textarea {
@@ -77,7 +94,9 @@
             padding: 12px;
             box-sizing: border-box;
             resize: vertical;
-            transition: border-color 0.3s;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s;
         }
         textarea:focus {
             outline: none;
@@ -98,7 +117,9 @@
             font-size: 14px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
-            transition: border-color 0.3s;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s;
         }
         input[type="number"]:focus {
             outline: none;
@@ -123,7 +144,7 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(61, 139, 253, 0.4);
         }
-
+        
         #status {
             margin-top: 20px;
             font-weight: 500;
@@ -197,7 +218,62 @@
             margin-top: 40px;
             padding: 20px;
             font-size: 0.9em;
-            color: #777777;
+            color: var(--text-muted-color);
+        }
+
+        .theme-switch-wrapper {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            align-items: center;
+        }
+        /* UPDATED: 라벨 스타일 추가 */
+        .theme-label {
+            margin-right: 10px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        .theme-switch {
+            display: inline-block;
+            height: 34px;
+            position: relative;
+            width: 60px;
+        }
+        .theme-switch input {
+            display:none;
+        }
+        .slider {
+            background-color: #ccc;
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transition: .4s;
+        }
+        .slider:before {
+            background-color: #fff;
+            bottom: 4px;
+            content: "";
+            height: 26px;
+            left: 4px;
+            position: absolute;
+            transition: .4s;
+            width: 26px;
+        }
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .slider.round {
+            border-radius: 34px;
+        }
+        .slider.round:before {
+            border-radius: 50%;
         }
 
         @media (max-width: 1200px) {
@@ -211,6 +287,14 @@
 
     <div class="main-container">
         <header>
+             <div class="theme-switch-wrapper">
+                <!-- UPDATED: 텍스트 라벨 추가 -->
+                <span class="theme-label">다크 모드</span>
+                <label class="theme-switch" for="darkModeToggle">
+                    <input type="checkbox" id="darkModeToggle" />
+                    <div class="slider round"></div>
+                </label>
+            </div>
             <h1>공격대 파티 최적화 도구</h1>
             <p>12명 공대원의 데이터를 기반으로 딜 * 버프력 편차가 가장 적은 최적의 조합을 찾아냅니다.</p>
         </header>
@@ -221,7 +305,7 @@
                 <label for="excelData">엑셀 데이터 붙여넣기 (12줄)</label>
                 <textarea id="excelData" placeholder="엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요."></textarea>
 
-                <label for="updoongieThreshold">업둥버퍼 인식값</label>
+                <label for="updoongieThreshold">업둥이 치환 기준값</label>
                 <input type="number" id="updoongieThreshold" value="200">
 
                 <label for="updoongieCap">업둥버퍼 딜러 치환값</label>
@@ -241,11 +325,11 @@
     </div>
     
     <footer>
-        <p>&copy; 2025 Pasta. All rights reserved.</p>
+        <p>&copy; 2024 Pasta. All rights reserved.</p>
     </footer>
 
     <script>
-        // Fisher-Yates shuffle
+        // --- Helper Functions ---
         function shuffle(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -326,6 +410,7 @@
             return { sum, avg, stdDev };
         }
         
+        // --- Core Logic ---
         function generateTeams() {
             const statusDiv = document.getElementById('status');
             const resultDiv = document.getElementById('resultOutput');
@@ -348,9 +433,8 @@
                     let overallBestCombination = null;
                     let overallMinStdDev = Infinity;
                     
-                    // UPDATED: 파티 조합을 무작위로 섞어서 탐색하는 로직 추가
-                    const partySearchIterations = 500; // 파티 조합 탐색 횟수
-                    const scheduleSearchIterations = 500; // 각 파티 조합별 스케줄 탐색 횟수
+                    const partySearchIterations = 1000; 
+                    const scheduleSearchIterations = 1000;
 
                     for (let i = 0; i < partySearchIterations; i++) {
                         const shuffledPlayers = shuffle([...players]);
@@ -405,7 +489,7 @@
                             overallMinStdDev = bestCombinationForParties.stats.stdDev;
                             overallBestCombination = {
                                 ...bestCombinationForParties,
-                                parties: currentParties // 가장 좋았던 파티 구성을 저장
+                                parties: currentParties 
                             };
                         }
                     }
@@ -426,14 +510,11 @@
             }, 100);
         }
 
+        // --- Display and Interaction ---
         function displayResults(combination, allPlayers, charRoles, updoongieCap, updoongieThreshold) {
             const resultDiv = document.getElementById('resultOutput');
-            const { parties, schedules, stats, synergies } = combination; // parties를 combination에서 가져옴
+            const { parties, schedules, stats, synergies } = combination;
 
-            // 결과를 쉽게 조회할 수 있도록 모든 플레이어를 ID 기반 맵으로 변환
-            const playerMap = new Map(allPlayers.map(p => [p.id, p]));
-
-            // 1. 결과를 쉽게 조회할 수 있는 플레이어 그리드 데이터 구조 생성
             const resultsGrid = {}; 
             allPlayers.forEach(p => resultsGrid[p.id] = Array(4));
 
@@ -463,10 +544,9 @@
                 }
             }
 
-            // 2. HTML 테이블 생성
             let tableHtml = `
                 <div class="result-summary">
-                    <strong>12개 파티 평균 딜*버프력:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
+                    <strong>12개 파티 평균 시너지:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
                     <strong>표준편차:</strong> ${stats.stdDev.toFixed(2)}
                 </div>
                 <table>
@@ -483,34 +563,28 @@
                     </thead>
                     <tbody>`;
             
-            // 최종적으로 구성된 파티 순서대로 플레이어를 출력
             parties.flat().forEach((player, index) => {
                 tableHtml += `<tr>`;
-
                 if (index % 4 === 0) {
                     const partyNum = Math.floor(index / 4) + 1;
                     tableHtml += `<td class="party-col" rowspan="4">${partyNum}파티</td>`;
                 }
-
                 tableHtml += `<td class="nickname-col">${player.nickname}</td>`;
                 tableHtml += `<td class="guild-col">${player.guild}</td>`;
-
                 for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                     const cellData = resultsGrid[player.id][raidIndex];
                     let cellContent = cellData.value.toLocaleString('ko-KR');
                     if (cellData.class.includes('updoongie') && cellData.value !== cellData.originalValue) {
-                         cellContent += ` <span style="font-size:0.85em; color:#777;">(${cellData.originalValue.toLocaleString('ko-KR')})</span>`;
+                         cellContent += ` <span style="font-size:0.85em; color:var(--text-muted-color);">(${cellData.originalValue.toLocaleString('ko-KR')})</span>`;
                     }
                     tableHtml += `<td class="${cellData.class}">${cellContent}</td>`;
                 }
-                
                 tableHtml += `</tr>`;
                 
                 if (index % 4 === 3) {
                     const partyIndex = Math.floor(index / 4);
                     tableHtml += `<tr class="party-synergy-row">`;
                     tableHtml += `<td colspan="3" class="synergy-label">딜 * 버프력</td>`;
-                    
                     for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                         const synergyIndex = raidIndex * 3 + partyIndex;
                         const partySynergy = synergies[synergyIndex];
@@ -523,6 +597,25 @@
             tableHtml += `</tbody></table>`;
             resultDiv.innerHTML = tableHtml;
         }
+
+        // --- Dark Mode ---
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-mode');
+            darkModeToggle.checked = true;
+        }
+
+        darkModeToggle.addEventListener('change', () => {
+            if (darkModeToggle.checked) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+
     </script>
 </body>
 </html>
