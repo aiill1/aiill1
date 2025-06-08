@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>업둥벞교 파티 최적화 도구</title>
+    <title>공격대 파티 최적화 도구 v11</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -211,7 +211,7 @@
 
     <div class="main-container">
         <header>
-            <h1>업둥벞교 파티 최적화 도구</h1>
+            <h1>공격대 파티 최적화 도구</h1>
             <p>12명 공대원의 데이터를 기반으로 딜 * 버프력 편차가 가장 적은 최적의 조합을 찾아냅니다.</p>
         </header>
 
@@ -221,7 +221,11 @@
                 <label for="excelData">엑셀 데이터 붙여넣기 (12줄)</label>
                 <textarea id="excelData" placeholder="엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요."></textarea>
 
-                <label for="updoongieCap">업둥버퍼 딜러 치환</label>
+                <!-- UPDATED: 치환 기준값 입력 필드 추가 -->
+                <label for="updoongieThreshold">업둥이 치환 기준값</label>
+                <input type="number" id="updoongieThreshold" value="200">
+
+                <label for="updoongieCap">업둥버퍼 딜러 치환값</label>
                 <input type="number" id="updoongieCap" value="15">
 
                 <button onclick="generateTeams()">최적 조합 생성</button>
@@ -238,7 +242,7 @@
     </div>
     
     <footer>
-        <p>&copy; 2025 Pasta. All rights reserved.</p>
+        <p>&copy; 2024 Pasta. All rights reserved.</p>
     </footer>
 
     <script>
@@ -334,7 +338,11 @@
                 try {
                     const excelData = document.getElementById('excelData').value;
                     const updoongieCap = parseInt(document.getElementById('updoongieCap').value, 10);
-                    if (isNaN(updoongieCap)) throw new Error('업둥이 딜량 치환은 숫자여야 합니다.');
+                    // UPDATED: 치환 기준값 읽기
+                    const updoongieThreshold = parseInt(document.getElementById('updoongieThreshold').value, 10);
+
+                    if (isNaN(updoongieCap)) throw new Error('업둥이 딜량 치환값은 숫자여야 합니다.');
+                    if (isNaN(updoongieThreshold)) throw new Error('업둥이 치환 기준값은 숫자여야 합니다.');
 
                     const players = parseData(excelData);
                     const parties = [players.slice(0, 4), players.slice(4, 8), players.slice(8, 12)];
@@ -364,8 +372,9 @@
                                     else if (role === '버퍼') buffer_val = player.chars['버퍼'];
                                 }
 
-                                const cappedUp1 = up1_val > 200 ? updoongieCap : up1_val;
-                                const cappedUp2 = up2_val > 200 ? updoongieCap : up2_val;
+                                // UPDATED: 하드코딩된 200 대신 입력받은 기준값 사용
+                                const cappedUp1 = up1_val > updoongieThreshold ? updoongieCap : up1_val;
+                                const cappedUp2 = up2_val > updoongieThreshold ? updoongieCap : up2_val;
                                 const partySynergy = (dps_val + cappedUp1 + cappedUp2) * buffer_val;
                                 allPartySynergies.push(partySynergy);
                             }
@@ -383,7 +392,8 @@
                     }
 
                     if (bestCombination) {
-                        displayResults(bestCombination, players, parties, charRoles, updoongieCap);
+                        // UPDATED: displayResults에 치환 기준값 전달
+                        displayResults(bestCombination, players, parties, charRoles, updoongieCap, updoongieThreshold);
                         statusDiv.className = 'status-success';
                         statusDiv.textContent = `최적 조합 생성 완료!`;
                     } else {
@@ -398,8 +408,8 @@
             }, 100);
         }
 
-
-        function displayResults(combination, players, parties, charRoles, updoongieCap) {
+        // UPDATED: 함수 시그니처에 updoongieThreshold 추가
+        function displayResults(combination, players, parties, charRoles, updoongieCap, updoongieThreshold) {
             const resultDiv = document.getElementById('resultOutput');
             const { schedules, stats, synergies } = combination;
 
@@ -421,11 +431,13 @@
                         else if (roleName === '버퍼') roleClass = 'role-buffer';
                         else {
                             roleClass = 'role-updoongie';
-                            if (originalValue > 200) displayValue = updoongieCap;
+                            // UPDATED: 하드코딩된 200 대신 입력받은 기준값 사용
+                            if (originalValue > updoongieThreshold) displayValue = updoongieCap;
                         }
                         
                         resultsGrid[player.id][raidIndex] = {
                             value: displayValue,
+                            originalValue: originalValue, 
                             class: roleClass
                         };
                     }
@@ -435,7 +447,7 @@
             // 2. HTML 테이블 생성
             let tableHtml = `
                 <div class="result-summary">
-                    <strong>12개 파티 평균 딜*버프력:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
+                    <strong>12개 파티 평균 시너지:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
                     <strong>표준편차:</strong> ${stats.stdDev.toFixed(2)}
                 </div>
                 <table>
@@ -461,15 +473,20 @@
                     tableHtml += `<td class="party-col" rowspan="4">${partyNum}파티</td>`;
                 }
 
-                // 닉네임 셀
+                // 닉네임, 모험단 셀
                 tableHtml += `<td class="nickname-col">${player.nickname}</td>`;
-                // 모험단 셀 추가
                 tableHtml += `<td class="guild-col">${player.guild}</td>`;
 
                 // 4개 공대 데이터 셀
                 for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                     const cellData = resultsGrid[player.id][raidIndex];
-                    tableHtml += `<td class="${cellData.class}">${cellData.value.toLocaleString('ko-KR')}</td>`;
+                    
+                    let cellContent = cellData.value.toLocaleString('ko-KR');
+                    if (cellData.class.includes('updoongie') && cellData.value !== cellData.originalValue) {
+                         cellContent += ` <span style="font-size:0.85em; color:#777;">(${cellData.originalValue.toLocaleString('ko-KR')})</span>`;
+                    }
+                    
+                    tableHtml += `<td class="${cellData.class}">${cellContent}</td>`;
                 }
                 
                 tableHtml += `</tr>`;
@@ -477,10 +494,9 @@
                 // 각 파티 그룹(4명)의 마지막에 시너지 요약 행 추가
                 if (index % 4 === 3) {
                     const partyIndex = Math.floor(index / 4);
-                    // UPDATED: colspan을 3으로 변경
                     tableHtml += `<tr class="party-synergy-row">`;
                     tableHtml += `<td colspan="3" class="synergy-label">딜 * 버프력</td>`;
-                    // 각 공대별 시너지 값
+                    
                     for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                         const synergyIndex = raidIndex * 3 + partyIndex;
                         const partySynergy = synergies[synergyIndex];
