@@ -228,7 +228,6 @@
             display: flex;
             align-items: center;
         }
-        /* UPDATED: 라벨 스타일 추가 */
         .theme-label {
             margin-right: 10px;
             font-size: 0.9em;
@@ -288,7 +287,6 @@
     <div class="main-container">
         <header>
              <div class="theme-switch-wrapper">
-                <!-- UPDATED: 텍스트 라벨 추가 -->
                 <span class="theme-label">다크 모드</span>
                 <label class="theme-switch" for="darkModeToggle">
                     <input type="checkbox" id="darkModeToggle" />
@@ -305,7 +303,7 @@
                 <label for="excelData">엑셀 데이터 붙여넣기 (12줄)</label>
                 <textarea id="excelData" placeholder="엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요."></textarea>
 
-                <label for="updoongieThreshold">업둥버퍼 인식값</label>
+                <label for="updoongieThreshold">업둥이 치환 기준값</label>
                 <input type="number" id="updoongieThreshold" value="200">
 
                 <label for="updoongieCap">업둥버퍼 딜러 치환값</label>
@@ -324,6 +322,71 @@
         </div>
     </div>
     
+    <!-- 예시 데이터 섹션 추가 -->
+    <div class="main-container" style="padding-top: 0; margin-top: 0;">
+        <div class="card">
+            <h2>엑셀 데이터 예시</h2>
+            <p>아래와 같은 형식의 6개 열 데이터를 엑셀이나 구글 시트에서 복사하여 위 입력창에 붙여넣으세요.</p>
+            <style>
+                .example-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 15px;
+                    font-size: 14px;
+                }
+                .example-table th, .example-table td {
+                    border: 1px solid var(--border-color);
+                    padding: 8px 12px;
+                    text-align: left;
+                }
+                .example-table thead th {
+                    background-color: var(--header-bg);
+                }
+            </style>
+            <table class="example-table">
+                <thead>
+                    <tr>
+                        <th>닉네임</th>
+                        <th>모험단</th>
+                        <th>메인딜</th>
+                        <th>업둥이1</th>
+                        <th>업둥이2</th>
+                        <th>버퍼</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>엘디르</td>
+                        <td>모험단A</td>
+                        <td>100</td>
+                        <td>0</td>
+                        <td>0</td>
+                        <td>440</td>
+                    </tr>
+                    <tr>
+                        <td>아니마</td>
+                        <td>모험단B</td>
+                        <td>60</td>
+                        <td>30</td>
+                        <td>10</td>
+                        <td>510</td>
+                    </tr>
+                     <tr>
+                        <td>모리</td>
+                        <td>모험단C</td>
+                        <td>40</td>
+                        <td>40</td>
+                        <td>10</td>
+                        <td>480</td>
+                    </tr>
+                    <tr>
+                        <td colspan="6" style="text-align:center;">... (총 12명) ...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <footer>
         <p>&copy; 2025 Pasta. All rights reserved.</p>
     </footer>
