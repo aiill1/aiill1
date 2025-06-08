@@ -221,7 +221,6 @@
                 <label for="excelData">엑셀 데이터 붙여넣기 (12줄)</label>
                 <textarea id="excelData" placeholder="엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요."></textarea>
 
-                <!-- UPDATED: 치환 기준값 입력 필드 추가 -->
                 <label for="updoongieThreshold">업둥이 치환 기준값</label>
                 <input type="number" id="updoongieThreshold" value="200">
 
@@ -331,69 +330,88 @@
             const statusDiv = document.getElementById('status');
             const resultDiv = document.getElementById('resultOutput');
             statusDiv.className = 'status-info';
-            statusDiv.textContent = '최적 조합을 생성 중입니다... (약 3~5초 소요)';
-            resultDiv.innerHTML = '<p>최상의 조합을 탐색하고 있습니다...</p>';
+            statusDiv.textContent = '최적 파티 조합을 탐색 중입니다... (시간이 다소 소요될 수 있습니다)';
+            resultDiv.innerHTML = '<p>여러 파티 조합을 비교하며 최상의 결과를 찾고 있습니다...</p>';
 
             setTimeout(() => {
                 try {
                     const excelData = document.getElementById('excelData').value;
                     const updoongieCap = parseInt(document.getElementById('updoongieCap').value, 10);
-                    // UPDATED: 치환 기준값 읽기
                     const updoongieThreshold = parseInt(document.getElementById('updoongieThreshold').value, 10);
 
                     if (isNaN(updoongieCap)) throw new Error('업둥이 딜량 치환값은 숫자여야 합니다.');
                     if (isNaN(updoongieThreshold)) throw new Error('업둥이 치환 기준값은 숫자여야 합니다.');
 
                     const players = parseData(excelData);
-                    const parties = [players.slice(0, 4), players.slice(4, 8), players.slice(8, 12)];
                     const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
                     
-                    let bestCombination = null;
-                    let minStdDev = Infinity;
+                    let overallBestCombination = null;
+                    let overallMinStdDev = Infinity;
                     
-                    const iterations = 50000;
-                    for (let i = 0; i < iterations; i++) {
-                        const partySchedules = parties.map(() => generateRandomLatinSquare(4));
-                        const allPartySynergies = [];
-                        
-                        for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
-                            for (let partyIndex = 0; partyIndex < 3; partyIndex++) {
-                                const currentPartyPlayers = parties[partyIndex];
-                                const currentSchedule = partySchedules[partyIndex];
-                                
-                                let dps_val = 0, up1_val = 0, up2_val = 0, buffer_val = 0;
-                                for (let playerIndex = 0; playerIndex < 4; playerIndex++) {
-                                    const player = currentPartyPlayers[playerIndex];
-                                    const role = charRoles[currentSchedule[raidIndex][playerIndex]];
-                                    
-                                    if (role === '딜러') dps_val = player.chars['딜러'];
-                                    else if (role === '업둥이1') up1_val = player.chars['업둥이1'];
-                                    else if (role === '업둥이2') up2_val = player.chars['업둥이2'];
-                                    else if (role === '버퍼') buffer_val = player.chars['버퍼'];
-                                }
+                    // UPDATED: 파티 조합을 무작위로 섞어서 탐색하는 로직 추가
+                    const partySearchIterations = 500; // 파티 조합 탐색 횟수
+                    const scheduleSearchIterations = 500; // 각 파티 조합별 스케줄 탐색 횟수
 
-                                // UPDATED: 하드코딩된 200 대신 입력받은 기준값 사용
-                                const cappedUp1 = up1_val > updoongieThreshold ? updoongieCap : up1_val;
-                                const cappedUp2 = up2_val > updoongieThreshold ? updoongieCap : up2_val;
-                                const partySynergy = (dps_val + cappedUp1 + cappedUp2) * buffer_val;
-                                allPartySynergies.push(partySynergy);
+                    for (let i = 0; i < partySearchIterations; i++) {
+                        const shuffledPlayers = shuffle([...players]);
+                        const currentParties = [
+                            shuffledPlayers.slice(0, 4), 
+                            shuffledPlayers.slice(4, 8), 
+                            shuffledPlayers.slice(8, 12)
+                        ];
+
+                        let bestCombinationForParties = null;
+                        let minStdDevForParties = Infinity;
+
+                        for (let j = 0; j < scheduleSearchIterations; j++) {
+                            const partySchedules = currentParties.map(() => generateRandomLatinSquare(4));
+                            const allPartySynergies = [];
+                            
+                            for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
+                                for (let partyIndex = 0; partyIndex < 3; partyIndex++) {
+                                    const currentPartyPlayers = currentParties[partyIndex];
+                                    const currentSchedule = partySchedules[partyIndex];
+                                    
+                                    let dps_val = 0, up1_val = 0, up2_val = 0, buffer_val = 0;
+                                    for (let playerIndex = 0; playerIndex < 4; playerIndex++) {
+                                        const player = currentPartyPlayers[playerIndex];
+                                        const role = charRoles[currentSchedule[raidIndex][playerIndex]];
+                                        
+                                        if (role === '딜러') dps_val = player.chars['딜러'];
+                                        else if (role === '업둥이1') up1_val = player.chars['업둥이1'];
+                                        else if (role === '업둥이2') up2_val = player.chars['업둥이2'];
+                                        else if (role === '버퍼') buffer_val = player.chars['버퍼'];
+                                    }
+
+                                    const cappedUp1 = up1_val > updoongieThreshold ? updoongieCap : up1_val;
+                                    const cappedUp2 = up2_val > updoongieThreshold ? updoongieCap : up2_val;
+                                    const partySynergy = (dps_val + cappedUp1 + cappedUp2) * buffer_val;
+                                    allPartySynergies.push(partySynergy);
+                                }
+                            }
+                            
+                            const stats = calculateStats(allPartySynergies);
+                            if (stats.stdDev < minStdDevForParties) {
+                                minStdDevForParties = stats.stdDev;
+                                bestCombinationForParties = { 
+                                    schedules: partySchedules, 
+                                    synergies: allPartySynergies,
+                                    stats: stats 
+                                };
                             }
                         }
-                        
-                        const stats = calculateStats(allPartySynergies);
-                        if (stats.stdDev < minStdDev) {
-                            minStdDev = stats.stdDev;
-                            bestCombination = { 
-                                schedules: partySchedules, 
-                                synergies: allPartySynergies,
-                                stats: stats 
+
+                        if (bestCombinationForParties && bestCombinationForParties.stats.stdDev < overallMinStdDev) {
+                            overallMinStdDev = bestCombinationForParties.stats.stdDev;
+                            overallBestCombination = {
+                                ...bestCombinationForParties,
+                                parties: currentParties // 가장 좋았던 파티 구성을 저장
                             };
                         }
                     }
 
-                    if (bestCombination) {
-                        // UPDATED: displayResults에 치환 기준값 전달
-                        displayResults(bestCombination, players, parties, charRoles, updoongieCap, updoongieThreshold);
+                    if (overallBestCombination) {
+                        displayResults(overallBestCombination, players, charRoles, updoongieCap, updoongieThreshold);
                         statusDiv.className = 'status-success';
                         statusDiv.textContent = `최적 조합 생성 완료!`;
                     } else {
@@ -408,14 +426,16 @@
             }, 100);
         }
 
-        // UPDATED: 함수 시그니처에 updoongieThreshold 추가
-        function displayResults(combination, players, parties, charRoles, updoongieCap, updoongieThreshold) {
+        function displayResults(combination, allPlayers, charRoles, updoongieCap, updoongieThreshold) {
             const resultDiv = document.getElementById('resultOutput');
-            const { schedules, stats, synergies } = combination;
+            const { parties, schedules, stats, synergies } = combination; // parties를 combination에서 가져옴
+
+            // 결과를 쉽게 조회할 수 있도록 모든 플레이어를 ID 기반 맵으로 변환
+            const playerMap = new Map(allPlayers.map(p => [p.id, p]));
 
             // 1. 결과를 쉽게 조회할 수 있는 플레이어 그리드 데이터 구조 생성
             const resultsGrid = {}; 
-            players.forEach(p => resultsGrid[p.id] = Array(4));
+            allPlayers.forEach(p => resultsGrid[p.id] = Array(4));
 
             for (let partyIndex = 0; partyIndex < 3; partyIndex++) {
                 for (let playerIndexInParty = 0; playerIndexInParty < 4; playerIndexInParty++) {
@@ -431,7 +451,6 @@
                         else if (roleName === '버퍼') roleClass = 'role-buffer';
                         else {
                             roleClass = 'role-updoongie';
-                            // UPDATED: 하드코딩된 200 대신 입력받은 기준값 사용
                             if (originalValue > updoongieThreshold) displayValue = updoongieCap;
                         }
                         
@@ -463,35 +482,30 @@
                         </tr>
                     </thead>
                     <tbody>`;
-
-            players.forEach((player, index) => {
+            
+            // 최종적으로 구성된 파티 순서대로 플레이어를 출력
+            parties.flat().forEach((player, index) => {
                 tableHtml += `<tr>`;
 
-                // 파티 번호 셀 (4명당 1번)
                 if (index % 4 === 0) {
                     const partyNum = Math.floor(index / 4) + 1;
                     tableHtml += `<td class="party-col" rowspan="4">${partyNum}파티</td>`;
                 }
 
-                // 닉네임, 모험단 셀
                 tableHtml += `<td class="nickname-col">${player.nickname}</td>`;
                 tableHtml += `<td class="guild-col">${player.guild}</td>`;
 
-                // 4개 공대 데이터 셀
                 for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                     const cellData = resultsGrid[player.id][raidIndex];
-                    
                     let cellContent = cellData.value.toLocaleString('ko-KR');
                     if (cellData.class.includes('updoongie') && cellData.value !== cellData.originalValue) {
                          cellContent += ` <span style="font-size:0.85em; color:#777;">(${cellData.originalValue.toLocaleString('ko-KR')})</span>`;
                     }
-                    
                     tableHtml += `<td class="${cellData.class}">${cellContent}</td>`;
                 }
                 
                 tableHtml += `</tr>`;
                 
-                // 각 파티 그룹(4명)의 마지막에 시너지 요약 행 추가
                 if (index % 4 === 3) {
                     const partyIndex = Math.floor(index / 4);
                     tableHtml += `<tr class="party-synergy-row">`;
