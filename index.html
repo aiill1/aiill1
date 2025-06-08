@@ -2,153 +2,497 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>치지직 채팅내역 닉네임 추출기</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>업둥벞교 파티 최적화 도구 v9</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; }
+        :root {
+            --bg-color: #f4f7f9;
+            --card-bg-color: #ffffff;
+            --primary-color: #3d8bfd;
+            --primary-hover-color: #3478e1;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+            --header-bg: #f8f9fa;
+            --footer-bg: #f1f3f5;
+            --dps-bg: #ffebee;
+            --updoongie-bg: #e3f2fd;
+            --buffer-bg: #e8f5e9;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.7;
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        h2 {
+            font-size: 1.8em;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .content-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 40px;
+        }
+
+        .card {
+            background-color: var(--card-bg-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 30px;
+        }
+        
         textarea {
-            width: 90%;
-            height: 200px;
-            margin-bottom: 10px;
-            display: block;
+            width: 100%;
+            height: 280px;
+            font-size: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            box-sizing: border-box;
+            resize: vertical;
+            transition: border-color 0.3s;
         }
-        #result {
-            margin-top: 10px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            background-color: #f9f9f9;
-            min-height: 50px;
-            white-space: pre-wrap; /* 줄바꿈 및 공백 유지 */
-            word-wrap: break-word; /* 긴 단어 줄바꿈 */
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
         }
+
         label {
-            margin-right: 5px;
-            font-weight: bold;
+            font-weight: 500;
+            font-size: 1.1em;
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 8px;
         }
-        input[type="text"] {
-            margin-bottom: 10px;
+
+        input[type="number"] {
+            width: 120px;
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            transition: border-color 0.3s;
         }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
         button {
-            padding: 8px 15px;
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: 700;
             cursor: pointer;
+            background: linear-gradient(45deg, var(--primary-color), #5a9fff);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            margin-top: 25px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(61, 139, 253, 0.3);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(61, 139, 253, 0.4);
+        }
+
+        #status {
+            margin-top: 20px;
+            font-weight: 500;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .status-error { background-color: #ffebee; color: #c62828; }
+        .status-success { background-color: #e8f5e9; color: #2e7d32; }
+        .status-info { background-color: #e3f2fd; color: #1565c0; }
+        
+        #resultOutput table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+            font-size: 14px;
+            table-layout: fixed;
+        }
+        #resultOutput th, #resultOutput td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: center;
+            font-weight: 500;
+            vertical-align: middle;
+            word-break: keep-all;
+        }
+        #resultOutput thead th {
+            background-color: var(--header-bg);
+            font-weight: 700;
+        }
+        
+        #resultOutput tbody .party-col, 
+        #resultOutput tbody .nickname-col,
+        #resultOutput tbody .guild-col {
+            font-weight: 700;
+            background-color: var(--header-bg);
+        }
+        
+        #resultOutput tbody .nickname-col,
+        #resultOutput tbody .guild-col {
+            text-align: left;
+            width: 120px;
+        }
+        
+        .role-dps { background-color: var(--dps-bg); }
+        .role-updoongie { background-color: var(--updoongie-bg); }
+        .role-buffer { background-color: var(--buffer-bg); }
+
+        .result-summary {
+            text-align: center;
+            font-size: 1.1em;
+            padding: 15px;
+            background-color: var(--header-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        
+        .party-synergy-row {
+            background-color: var(--footer-bg);
+        }
+        .party-synergy-row td {
+            font-weight: 700;
+        }
+        .party-synergy-row .synergy-label {
+            color: var(--primary-color);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            font-size: 0.9em;
+            color: #777777;
+        }
+
+        @media (max-width: 1200px) {
+            .content-wrapper {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
 
-<h1>치지직 채팅내역 닉네임 추출기©2025.미제레</h1>
+    <div class="main-container">
+        <header>
+            <h1>업둥벞교 파티 최적화 도구</h1>
+            <p>12명 공대원의 데이터를 기반으로 딜 * 버프력 편차가 가장 적은 최적의 조합을 찾아냅니다.</p>
+        </header>
 
-<label for="chatInput">채팅 내용 붙여넣기:</label>
-<textarea id="chatInput" placeholder="채팅 로그 붙여넣는 곳"></textarea>
+        <div class="content-wrapper">
+            <div class="card">
+                <h2>데이터 입력</h2>
+                <label for="excelData">엑셀 데이터 붙여넣기 (12줄)</label>
+                <textarea id="excelData" placeholder="엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요."></textarea>
 
-<label for="keywordInput">찾을 메시지 (비워두면 전체 닉네임 출력):</label>
-<input type="text" id="keywordInput" value=""><br>
+                <label for="updoongieCap">업둥버퍼 딜러 치환</label>
+                <input type="number" id="updoongieCap" value="15">
 
-<button onclick="analyzeChat()">분석 시작</button>
+                <button onclick="generateTeams()">최적 조합 생성</button>
+                <div id="status"></div>
+            </div>
 
-<h2>결과:</h2>
-<div id="result">결과</div>
+            <div class="card">
+                 <h2>생성 결과</h2>
+                 <div id="resultOutput">
+                     <p>결과가 여기에 표시됩니다.</p>
+                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>&copy; 2024 Pasta. All rights reserved.</p>
+    </footer>
 
-<script>
-    /**
-     * 채팅 내용과 특정 메시지를 기반으로 닉네임을 추출합니다.
-     * targetMessage가 비어 있으면 모든 닉네임을 추출합니다.
-     * @param {string} content - 전체 채팅 내용 문자열
-     * @param {string} targetMessage - 찾고자 하는 특정 메시지 (비어있을 수 있음)
-     * @returns {string|null} - 쉼표로 구분된 정렬된 닉네임 문자열 또는 오류 메시지
-     */
-    function extractNicknamesByMessage(content, targetMessage) {
-        const nicknames = new Set(); // 중복 제거를 위해 Set 사용
-        try {
-            // Python의 re.split(r'\n\s*\n', content.strip()) 와 유사하게 구현
-            const blocks = content.trim().split(/\n\s*\n/);
+    <script>
+        // Fisher-Yates shuffle
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
 
-            for (const block of blocks) {
-                const trimmedBlock = block.trim();
-                if (!trimmedBlock) {
-                    continue;
+        function generateBaseLatinSquare(n) {
+            const square = Array(n).fill(null).map(() => Array(n));
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    square[i][j] = (i + j) % n;
+                }
+            }
+            return square;
+        }
+        
+        function generateRandomLatinSquare(n) {
+            const base = generateBaseLatinSquare(n);
+            const shuffledRows = shuffle([...Array(n).keys()]);
+            const shuffledCols = shuffle([...Array(n).keys()]);
+            const shuffledSymbols = shuffle([...Array(n).keys()]);
+
+            const randomSquare = Array(n).fill(null).map(() => Array(n));
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    randomSquare[i][j] = shuffledSymbols[base[shuffledRows[i]][shuffledCols[j]]];
+                }
+            }
+            return randomSquare;
+        }
+
+        function parseData(text) {
+            const lines = text.trim().split('\n');
+            if (lines.length !== 12) {
+                throw new Error(`12명의 데이터가 필요합니다. 현재 ${lines.length}개의 줄이 입력되었습니다.`);
+            }
+
+            return lines.map((line, index) => {
+                const cleanedLine = line.trim().replace(/\s+/g, '\t');
+                const parts = cleanedLine.split('\t');
+                
+                if (parts.length !== 6) {
+                    throw new Error(`${index + 1}번째 줄의 형식이 올바르지 않습니다. 6개의 열(닉네임, 모험단, ...)이 필요합니다.`);
+                }
+                
+                const nickname = parts[0];
+                const guild = parts[1];
+                const mainDps = parseInt(parts[2], 10);
+                const updoongie1 = parseInt(parts[3], 10);
+                const updoongie2 = parseInt(parts[4], 10);
+                const bufferPower = parseInt(parts[5], 10);
+
+                if ([mainDps, updoongie1, updoongie2, bufferPower].some(isNaN)) {
+                     throw new Error(`${index + 1}번째 줄('${nickname}')에 숫자로 변환할 수 없는 값이 있습니다.`);
                 }
 
-                const lines = trimmedBlock.split('\n');
+                return {
+                    id: index,
+                    nickname: nickname,
+                    guild: guild,
+                    chars: {
+                        '딜러': mainDps,
+                        '업둥이1': updoongie1,
+                        '업둥이2': updoongie2,
+                        '버퍼': bufferPower
+                    }
+                };
+            });
+        }
 
-                // 최소 1줄 (닉네임)은 있어야 함
-                if (lines.length >= 1) {
-                    const nickname = lines[0].trim();
+        function calculateStats(numbers) {
+            const sum = numbers.reduce((a, b) => a + b, 0);
+            const avg = sum / numbers.length || 0;
+            const variance = numbers.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / numbers.length || 0;
+            const stdDev = Math.sqrt(variance);
+            return { sum, avg, stdDev };
+        }
+        
+        function generateTeams() {
+            const statusDiv = document.getElementById('status');
+            const resultDiv = document.getElementById('resultOutput');
+            statusDiv.className = 'status-info';
+            statusDiv.textContent = '최적 조합을 생성 중입니다... (약 3~5초 소요)';
+            resultDiv.innerHTML = '<p>최상의 조합을 탐색하고 있습니다...</p>';
 
-                    // 닉네임이 유효한 경우에만 처리
-                    if (nickname) {
-                        // targetMessage가 제공되지 않았으면(비어 있으면) 모든 닉네임 추가
-                        if (!targetMessage) {
-                            nicknames.add(nickname);
-                        }
-                        // targetMessage가 제공되었고, 메시지 라인(두 번째 줄)이 존재하며 일치하는 경우
-                        else if (lines.length >= 2) {
-                            const messageLine = lines[1].trim();
-                            if (messageLine === targetMessage) {
-                                nicknames.add(nickname);
+            setTimeout(() => {
+                try {
+                    const excelData = document.getElementById('excelData').value;
+                    const updoongieCap = parseInt(document.getElementById('updoongieCap').value, 10);
+                    if (isNaN(updoongieCap)) throw new Error('업둥이 딜량 치환은 숫자여야 합니다.');
+
+                    const players = parseData(excelData);
+                    const parties = [players.slice(0, 4), players.slice(4, 8), players.slice(8, 12)];
+                    const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
+                    
+                    let bestCombination = null;
+                    let minStdDev = Infinity;
+                    
+                    const iterations = 50000;
+                    for (let i = 0; i < iterations; i++) {
+                        const partySchedules = parties.map(() => generateRandomLatinSquare(4));
+                        const allPartySynergies = [];
+                        
+                        for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
+                            for (let partyIndex = 0; partyIndex < 3; partyIndex++) {
+                                const currentPartyPlayers = parties[partyIndex];
+                                const currentSchedule = partySchedules[partyIndex];
+                                
+                                let dps_val = 0, up1_val = 0, up2_val = 0, buffer_val = 0;
+                                for (let playerIndex = 0; playerIndex < 4; playerIndex++) {
+                                    const player = currentPartyPlayers[playerIndex];
+                                    const role = charRoles[currentSchedule[raidIndex][playerIndex]];
+                                    
+                                    if (role === '딜러') dps_val = player.chars['딜러'];
+                                    else if (role === '업둥이1') up1_val = player.chars['업둥이1'];
+                                    else if (role === '업둥이2') up2_val = player.chars['업둥이2'];
+                                    else if (role === '버퍼') buffer_val = player.chars['버퍼'];
+                                }
+
+                                const cappedUp1 = up1_val > 200 ? updoongieCap : up1_val;
+                                const cappedUp2 = up2_val > 200 ? updoongieCap : up2_val;
+                                const partySynergy = (dps_val + cappedUp1 + cappedUp2) * buffer_val;
+                                allPartySynergies.push(partySynergy);
                             }
                         }
+                        
+                        const stats = calculateStats(allPartySynergies);
+                        if (stats.stdDev < minStdDev) {
+                            minStdDev = stats.stdDev;
+                            bestCombination = { 
+                                schedules: partySchedules, 
+                                synergies: allPartySynergies,
+                                stats: stats 
+                            };
+                        }
+                    }
+
+                    if (bestCombination) {
+                        displayResults(bestCombination, players, parties, charRoles, updoongieCap);
+                        statusDiv.className = 'status-success';
+                        statusDiv.textContent = `최적 조합 생성 완료!`;
+                    } else {
+                        throw new Error('조합을 찾는 데 실패했습니다. 입력 데이터를 확인해주세요.');
+                    }
+
+                } catch (e) {
+                    statusDiv.className = 'status-error';
+                    statusDiv.textContent = `오류: ${e.message}`;
+                    resultDiv.innerHTML = `<p>오류가 발생했습니다. 입력 데이터를 확인해주세요.</p>`;
+                }
+            }, 100);
+        }
+
+
+        function displayResults(combination, players, parties, charRoles, updoongieCap) {
+            const resultDiv = document.getElementById('resultOutput');
+            const { schedules, stats, synergies } = combination;
+
+            // 1. 결과를 쉽게 조회할 수 있는 플레이어 그리드 데이터 구조 생성
+            const resultsGrid = {}; 
+            players.forEach(p => resultsGrid[p.id] = Array(4));
+
+            for (let partyIndex = 0; partyIndex < 3; partyIndex++) {
+                for (let playerIndexInParty = 0; playerIndexInParty < 4; playerIndexInParty++) {
+                    for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
+                        const player = parties[partyIndex][playerIndexInParty];
+                        const roleName = charRoles[schedules[partyIndex][raidIndex][playerIndexInParty]];
+                        const originalValue = player.chars[roleName];
+                        
+                        let displayValue = originalValue;
+                        let roleClass = '';
+
+                        if (roleName === '딜러') roleClass = 'role-dps';
+                        else if (roleName === '버퍼') roleClass = 'role-buffer';
+                        else {
+                            roleClass = 'role-updoongie';
+                            if (originalValue > 200) displayValue = updoongieCap;
+                        }
+                        
+                        resultsGrid[player.id][raidIndex] = {
+                            value: displayValue,
+                            class: roleClass
+                        };
                     }
                 }
             }
 
-            // Set을 배열로 변환 후 정렬하고 쉼표로 연결
-            const sortedNicknames = Array.from(nicknames).sort();
-            return sortedNicknames.join(",");
+            // 2. HTML 테이블 생성
+            let tableHtml = `
+                <div class="result-summary">
+                    <strong>12개 파티 평균 딜*버프력:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
+                    <strong>표준편차:</strong> ${stats.stdDev.toFixed(2)}
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>파티</th>
+                            <th class="nickname-col">닉네임</th>
+                            <th class="guild-col">모험단</th>
+                            <th>1공대</th>
+                            <th>2공대</th>
+                            <th>3공대</th>
+                            <th>4공대</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
 
-        } catch (e) {
-            console.error("오류 발생:", e);
-            // 사용자에게 보여줄 오류 메시지 반환
-            return "오류가 발생했습니다: " + e.message;
+            players.forEach((player, index) => {
+                tableHtml += `<tr>`;
+
+                // 파티 번호 셀 (4명당 1번)
+                if (index % 4 === 0) {
+                    const partyNum = Math.floor(index / 4) + 1;
+                    tableHtml += `<td class="party-col" rowspan="4">${partyNum}파티</td>`;
+                }
+
+                // 닉네임 셀
+                tableHtml += `<td class="nickname-col">${player.nickname}</td>`;
+                // 모험단 셀 추가
+                tableHtml += `<td class="guild-col">${player.guild}</td>`;
+
+                // 4개 공대 데이터 셀
+                for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
+                    const cellData = resultsGrid[player.id][raidIndex];
+                    tableHtml += `<td class="${cellData.class}">${cellData.value.toLocaleString('ko-KR')}</td>`;
+                }
+                
+                tableHtml += `</tr>`;
+                
+                // 각 파티 그룹(4명)의 마지막에 시너지 요약 행 추가
+                if (index % 4 === 3) {
+                    const partyIndex = Math.floor(index / 4);
+                    // UPDATED: colspan을 3으로 변경
+                    tableHtml += `<tr class="party-synergy-row">`;
+                    tableHtml += `<td colspan="3" class="synergy-label">딜 * 버프력</td>`;
+                    // 각 공대별 시너지 값
+                    for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
+                        const synergyIndex = raidIndex * 3 + partyIndex;
+                        const partySynergy = synergies[synergyIndex];
+                        tableHtml += `<td>${partySynergy.toLocaleString('ko-KR', {maximumFractionDigits: 0})}</td>`;
+                    }
+                    tableHtml += `</tr>`;
+                }
+            });
+            
+            tableHtml += `</tbody></table>`;
+            resultDiv.innerHTML = tableHtml;
         }
-    }
-
-    /**
-     * 입력된 채팅 내용을 분석하고 결과를 화면에 표시합니다.
-     */
-    function analyzeChat() {
-        const chatContent = document.getElementById('chatInput').value;
-        // 입력값 앞뒤 공백 제거
-        const keyword = document.getElementById('keywordInput').value.trim();
-        const resultDiv = document.getElementById('result');
-
-        // 채팅 내용이 비어있는지 확인
-        if (!chatContent.trim()) {
-            resultDiv.textContent = "채팅 내용을 입력해주세요.";
-            return;
-        }
-
-        // 닉네임 추출 함수 호출
-        const foundNicknames = extractNicknamesByMessage(chatContent, keyword);
-
-        let resultMessage = "";
-
-        // 함수가 오류 메시지를 반환했는지 확인
-        if (typeof foundNicknames === 'string' && foundNicknames.startsWith("오류")) {
-             resultMessage = foundNicknames;
-        }
-        // 결과가 있는 경우 (빈 문자열이 아닌 경우)
-        else if (foundNicknames) {
-            // 키워드가 있었는지 여부에 따라 메시지 분기
-            if (keyword) {
-                resultMessage = `'${keyword}' 메시지를 보낸 닉네임:\n${foundNicknames}`;
-            } else {
-                resultMessage = `전체 닉네임 목록:\n${foundNicknames}`; // 키워드가 없을 때 메시지
-            }
-        }
-        // 결과가 없는 경우 (빈 문자열 "" 반환됨)
-        else {
-             // 키워드가 있었는지 여부에 따라 메시지 분기
-            if (keyword) {
-                 resultMessage = `'${keyword}' 메시지를 보낸 사용자를 찾을 수 없습니다.`;
-            } else {
-                 resultMessage = `채팅 내용에서 닉네임을 찾을 수 없습니다.`; // 키워드가 없을 때 메시지
-            }
-        }
-
-        // 최종 결과 메시지를 화면에 표시
-        resultDiv.textContent = resultMessage;
-    }
-</script>
-
+    </script>
 </body>
 </html>
