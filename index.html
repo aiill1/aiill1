@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>공격대 파티 최적화 도구</title>
+    <title>공격대 파티 최적화 도구 (4, 8, 12인)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -278,7 +278,7 @@
         .mode-selector {
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 10px;
             margin-bottom: 20px;
         }
         .mode-selector label {
@@ -325,10 +325,13 @@
                 
                 <div class="mode-selector">
                     <input type="radio" id="mode12" name="mode" value="12" checked>
-                    <label for="mode12">12인 공격대</label>
+                    <label for="mode12">12인 공대</label>
+
+                    <input type="radio" id="mode8" name="mode" value="8">
+                    <label for="mode8">8인 공대</label>
                     
                     <input type="radio" id="mode4" name="mode" value="4">
-                    <label for="mode4">4인 공격대</label>
+                    <label for="mode4">4인 공대</label>
                 </div>
 
                 <label for="excelData">엑셀 데이터 붙여넣기</label>
@@ -402,7 +405,7 @@
                         <td>510</td>
                     </tr>
                      <tr>
-                        <td>모리</td>
+                        <td>나벨</td>
                         <td>모험단C</td>
                         <td>40</td>
                         <td>40</td>
@@ -524,6 +527,8 @@
                     
                     if (mode === '12') {
                         generate12PlayerTeams(excelData, updoongieCap, updoongieThreshold);
+                    } else if (mode === '8') {
+                        generate8PlayerTeams(excelData, updoongieCap, updoongieThreshold);
                     } else {
                         generate4PlayerTeam(excelData, updoongieCap, updoongieThreshold);
                     }
@@ -598,6 +603,69 @@
                 document.getElementById('status').textContent = `최적 조합 생성 완료!`;
             } else { throw new Error('12인 조합을 찾는 데 실패했습니다.'); }
         }
+
+        function generate8PlayerTeams(excelData, updoongieCap, updoongieThreshold) {
+            const players = parseData(excelData, 8);
+            const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
+            let overallBestCombination = null;
+            let overallMinStdDev = Infinity;
+            
+            const partySearchIterations = 1000;
+            const scheduleSearchIterations = 1000;
+
+            for (let i = 0; i < partySearchIterations; i++) {
+                const shuffledPlayers = shuffle([...players]);
+                const currentParties = [
+                    shuffledPlayers.slice(0, 4), 
+                    shuffledPlayers.slice(4, 8)
+                ];
+
+                let bestCombinationForParties = null;
+                let minStdDevForParties = Infinity;
+
+                for (let j = 0; j < scheduleSearchIterations; j++) {
+                    const partySchedules = currentParties.map(() => generateRandomLatinSquare(4));
+                    const allPartySynergies = [];
+                    
+                    for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
+                        for (let partyIndex = 0; partyIndex < 2; partyIndex++) { // 2 파티
+                            const currentPartyPlayers = currentParties[partyIndex];
+                            const currentSchedule = partySchedules[partyIndex];
+                            let dps_val = 0, up1_val = 0, up2_val = 0, buffer_val = 0;
+                            for (let playerIndex = 0; playerIndex < 4; playerIndex++) {
+                                const player = currentPartyPlayers[playerIndex];
+                                const role = charRoles[currentSchedule[raidIndex][playerIndex]];
+                                if (role === '딜러') dps_val = player.chars['딜러'];
+                                else if (role === '업둥이1') up1_val = player.chars['업둥이1'];
+                                else if (role === '업둥이2') up2_val = player.chars['업둥이2'];
+                                else if (role === '버퍼') buffer_val = player.chars['버퍼'];
+                            }
+                            const cappedUp1 = up1_val > updoongieThreshold ? updoongieCap : up1_val;
+                            const cappedUp2 = up2_val > updoongieThreshold ? updoongieCap : up2_val;
+                            const partySynergy = (dps_val + cappedUp1 + cappedUp2) * buffer_val;
+                            allPartySynergies.push(partySynergy);
+                        }
+                    }
+                    
+                    const stats = calculateStats(allPartySynergies);
+                    if (stats.stdDev < minStdDevForParties) {
+                        minStdDevForParties = stats.stdDev;
+                        bestCombinationForParties = { schedules: partySchedules, synergies: allPartySynergies, stats: stats };
+                    }
+                }
+
+                if (bestCombinationForParties && bestCombinationForParties.stats.stdDev < overallMinStdDev) {
+                    overallMinStdDev = bestCombinationForParties.stats.stdDev;
+                    overallBestCombination = { ...bestCombinationForParties, parties: currentParties };
+                }
+            }
+
+            if (overallBestCombination) {
+                displayResults(overallBestCombination, players, charRoles, updoongieCap, updoongieThreshold);
+                document.getElementById('status').className = 'status-success';
+                document.getElementById('status').textContent = `최적 조합 생성 완료!`;
+            } else { throw new Error('8인 조합을 찾는 데 실패했습니다.'); }
+        }
         
         function generate4PlayerTeam(excelData, updoongieCap, updoongieThreshold) {
             const players = parseData(excelData, 4);
@@ -649,15 +717,16 @@
         function displayResults(combination, allPlayers, charRoles, updoongieCap, updoongieThreshold) {
             const resultDiv = document.getElementById('resultOutput');
             const { parties, schedules, stats, synergies } = combination;
+            const numParties = parties.length;
 
             const resultsGrid = {}; 
             allPlayers.forEach(p => resultsGrid[p.id] = Array(4));
 
-            for (let partyIndex = 0; partyIndex < parties.length; partyIndex++) {
+            for (let partyIndex = 0; partyIndex < numParties; partyIndex++) {
                 for (let playerIndexInParty = 0; playerIndexInParty < 4; playerIndexInParty++) {
                     for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                         const player = parties[partyIndex][playerIndexInParty];
-                        const schedule = allPlayers.length === 12 ? schedules[partyIndex] : schedules[0];
+                        const schedule = schedules[partyIndex];
                         const roleName = charRoles[schedule[raidIndex][playerIndexInParty]];
                         const originalValue = player.chars[roleName];
                         let displayValue = originalValue;
@@ -681,7 +750,7 @@
 
             let tableHtml = `
                 <div class="result-summary">
-                    <strong>파티 평균 딜*버프력:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
+                    <strong>파티 평균 시너지:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
                     <strong>표준편차:</strong> ${stats.stdDev.toFixed(2)}
                 </div>
                 <table>
@@ -719,10 +788,9 @@
                 if (index % 4 === 3) {
                     const partyIndex = Math.floor(index / 4);
                     tableHtml += `<tr class="party-synergy-row">`;
-                    // UPDATED: colspan을 3에서 2로 수정하여 정렬 오류 해결
                     tableHtml += `<td colspan="2" class="synergy-label">딜 * 버프력</td>`;
                     for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
-                        const synergyValue = allPlayers.length === 12 ? synergies[raidIndex * 3 + partyIndex] : synergies[raidIndex];
+                        const synergyValue = synergies[raidIndex * numParties + partyIndex];
                         tableHtml += `<td>${synergyValue.toLocaleString('ko-KR', {maximumFractionDigits: 0})}</td>`;
                     }
                     tableHtml += `</tr>`;
@@ -736,9 +804,15 @@
         // --- Event Listeners ---
         document.querySelectorAll('input[name="mode"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
-                const placeholderText = e.target.value === '12' 
-                    ? "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요."
-                    : "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 4줄 데이터를 복사하여 여기에 붙여넣으세요.";
+                let placeholderText = "";
+                const value = e.target.value;
+                if (value === '12') {
+                    placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요.";
+                } else if (value === '8') {
+                     placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 8줄 데이터를 복사하여 여기에 붙여넣으세요.";
+                } else {
+                    placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 4줄 데이터를 복사하여 여기에 붙여넣으세요.";
+                }
                 document.getElementById('excelData').placeholder = placeholderText;
             });
         });
