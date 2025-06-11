@@ -66,10 +66,86 @@
         
         h2 {
             font-size: 1.8em;
-            border-bottom: 2px solid var(--primary-color);
             padding-bottom: 10px;
             margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
+
+        h2 > span:first-child {
+             border-bottom: 2px solid var(--primary-color);
+             padding-bottom: 10px;
+        }
+
+        .tooltip-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding-bottom: 10px;
+        }
+
+        .tooltip-icon {
+            width: 22px;
+            height: 22px;
+            background-color: var(--text-muted-color);
+            color: var(--card-bg-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: help;
+            user-select: none;
+        }
+
+        .tooltip-text {
+            visibility: hidden;
+            width: 280px;
+            background-color: #333;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px 15px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -148px; /* Half of width + padding */
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 14px;
+            line-height: 1.6;
+            font-weight: 400;
+            pointer-events: none;
+        }
+
+        .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        .tooltip-wrapper:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        body.dark-mode .tooltip-text {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        body.dark-mode .tooltip-text::after {
+            border-color: #f0f0f0 transparent transparent transparent;
+        }
+
 
         .content-wrapper {
             display: grid;
@@ -321,7 +397,17 @@
 
         <div class="content-wrapper">
             <div class="card">
-                <h2>데이터 입력</h2>
+                <h2>
+                    <span>데이터 입력</span>
+                    <span class="tooltip-wrapper">
+                        <span class="tooltip-icon">?</span>
+                        <span class="tooltip-text">
+                            닉네임과 모험단은 띄어쓰기 없이 붙여서 입력하세요.<br><br>
+                            8인 및 12인 공대 구성으로 4인 파티 정보를 중복 입력하여 여러 기수를 운행 시 최적의 구성을 찾을 수 있습니다.
+                            모험단으로 구분합니다.
+                        </span>
+                    </span>
+                </h2>
                 
                 <div class="mode-selector">
                     <input type="radio" id="mode12" name="mode" value="12" checked>
@@ -331,13 +417,13 @@
                     <label for="mode8">8인 공대</label>
                     
                     <input type="radio" id="mode4" name="mode" value="4">
-                    <label for="mode4">4인 공대</label>
+                    <label for="mode4">4인 파티</label>
                 </div>
 
                 <label for="excelData">엑셀 데이터 붙여넣기</label>
                 <textarea id="excelData" placeholder="엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요."></textarea>
 
-                <label for="updoongieThreshold">업둥버퍼 인식값</label>
+                <label for="updoongieThreshold">업둥이 치환 기준값</label>
                 <input type="number" id="updoongieThreshold" value="200">
 
                 <label for="updoongieCap">업둥버퍼 딜러 치환값</label>
@@ -540,22 +626,34 @@
             }, 100);
         }
 
-        function generate12PlayerTeams(excelData, updoongieCap, updoongieThreshold) {
-            const players = parseData(excelData, 12);
+        function runCombinationFinder(players, numParties, updoongieCap, updoongieThreshold) {
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
             let overallBestCombination = null;
             let overallMinStdDev = Infinity;
             
             const partySearchIterations = 1000;
             const scheduleSearchIterations = 1000;
+            const maxAttempts = partySearchIterations * 10;
+            let validCompositionsFound = 0;
+            let attempts = 0;
 
-            for (let i = 0; i < partySearchIterations; i++) {
+            while (validCompositionsFound < partySearchIterations && attempts < maxAttempts) {
+                attempts++;
                 const shuffledPlayers = shuffle([...players]);
-                const currentParties = [
-                    shuffledPlayers.slice(0, 4), 
-                    shuffledPlayers.slice(4, 8), 
-                    shuffledPlayers.slice(8, 12)
-                ];
+                const currentParties = [];
+                for (let i = 0; i < numParties; i++) {
+                    currentParties.push(shuffledPlayers.slice(i * 4, (i + 1) * 4));
+                }
+
+                const isCompositionValid = currentParties.every(party => {
+                    const guilds = new Set(party.map(p => p.guild));
+                    return guilds.size === party.length;
+                });
+
+                if (!isCompositionValid) {
+                    continue;
+                }
+                validCompositionsFound++;
 
                 let bestCombinationForParties = null;
                 let minStdDevForParties = Infinity;
@@ -565,7 +663,7 @@
                     const allPartySynergies = [];
                     
                     for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
-                        for (let partyIndex = 0; partyIndex < 3; partyIndex++) {
+                        for (let partyIndex = 0; partyIndex < numParties; partyIndex++) {
                             const currentPartyPlayers = currentParties[partyIndex];
                             const currentSchedule = partySchedules[partyIndex];
                             let dps_val = 0, up1_val = 0, up2_val = 0, buffer_val = 0;
@@ -601,74 +699,28 @@
                 displayResults(overallBestCombination, players, charRoles, updoongieCap, updoongieThreshold);
                 document.getElementById('status').className = 'status-success';
                 document.getElementById('status').textContent = `최적 조합 생성 완료!`;
-            } else { throw new Error('12인 조합을 찾는 데 실패했습니다.'); }
+            } else {
+                throw new Error(`${numParties * 4}인 조합을 찾는 데 실패했습니다. 동일 모험단 인원이 많아 유효한 파티를 구성할 수 없습니다.`);
+            }
+        }
+        
+        function generate12PlayerTeams(excelData, updoongieCap, updoongieThreshold) {
+            const players = parseData(excelData, 12);
+            runCombinationFinder(players, 3, updoongieCap, updoongieThreshold);
         }
 
         function generate8PlayerTeams(excelData, updoongieCap, updoongieThreshold) {
             const players = parseData(excelData, 8);
-            const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
-            let overallBestCombination = null;
-            let overallMinStdDev = Infinity;
-            
-            const partySearchIterations = 1000;
-            const scheduleSearchIterations = 1000;
-
-            for (let i = 0; i < partySearchIterations; i++) {
-                const shuffledPlayers = shuffle([...players]);
-                const currentParties = [
-                    shuffledPlayers.slice(0, 4), 
-                    shuffledPlayers.slice(4, 8)
-                ];
-
-                let bestCombinationForParties = null;
-                let minStdDevForParties = Infinity;
-
-                for (let j = 0; j < scheduleSearchIterations; j++) {
-                    const partySchedules = currentParties.map(() => generateRandomLatinSquare(4));
-                    const allPartySynergies = [];
-                    
-                    for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
-                        for (let partyIndex = 0; partyIndex < 2; partyIndex++) { // 2 파티
-                            const currentPartyPlayers = currentParties[partyIndex];
-                            const currentSchedule = partySchedules[partyIndex];
-                            let dps_val = 0, up1_val = 0, up2_val = 0, buffer_val = 0;
-                            for (let playerIndex = 0; playerIndex < 4; playerIndex++) {
-                                const player = currentPartyPlayers[playerIndex];
-                                const role = charRoles[currentSchedule[raidIndex][playerIndex]];
-                                if (role === '딜러') dps_val = player.chars['딜러'];
-                                else if (role === '업둥이1') up1_val = player.chars['업둥이1'];
-                                else if (role === '업둥이2') up2_val = player.chars['업둥이2'];
-                                else if (role === '버퍼') buffer_val = player.chars['버퍼'];
-                            }
-                            const cappedUp1 = up1_val > updoongieThreshold ? updoongieCap : up1_val;
-                            const cappedUp2 = up2_val > updoongieThreshold ? updoongieCap : up2_val;
-                            const partySynergy = (dps_val + cappedUp1 + cappedUp2) * buffer_val;
-                            allPartySynergies.push(partySynergy);
-                        }
-                    }
-                    
-                    const stats = calculateStats(allPartySynergies);
-                    if (stats.stdDev < minStdDevForParties) {
-                        minStdDevForParties = stats.stdDev;
-                        bestCombinationForParties = { schedules: partySchedules, synergies: allPartySynergies, stats: stats };
-                    }
-                }
-
-                if (bestCombinationForParties && bestCombinationForParties.stats.stdDev < overallMinStdDev) {
-                    overallMinStdDev = bestCombinationForParties.stats.stdDev;
-                    overallBestCombination = { ...bestCombinationForParties, parties: currentParties };
-                }
-            }
-
-            if (overallBestCombination) {
-                displayResults(overallBestCombination, players, charRoles, updoongieCap, updoongieThreshold);
-                document.getElementById('status').className = 'status-success';
-                document.getElementById('status').textContent = `최적 조합 생성 완료!`;
-            } else { throw new Error('8인 조합을 찾는 데 실패했습니다.'); }
+            runCombinationFinder(players, 2, updoongieCap, updoongieThreshold);
         }
         
         function generate4PlayerTeam(excelData, updoongieCap, updoongieThreshold) {
             const players = parseData(excelData, 4);
+            const guilds = new Set(players.map(p => p.guild));
+            if (guilds.size < players.length) {
+                throw new Error('4인 파티 모드에서는 동일한 모험단 소속 인원이 있을 수 없습니다.');
+            }
+            
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
             let bestCombination = null;
             let minStdDev = Infinity;
@@ -750,7 +802,7 @@
 
             let tableHtml = `
                 <div class="result-summary">
-                    <strong>파티 평균 딜*버프력:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
+                    <strong>파티 평균 시너지:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
                     <strong>표준편차:</strong> ${stats.stdDev.toFixed(2)}
                 </div>
                 <table>
