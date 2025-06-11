@@ -499,7 +499,7 @@
                         <td>480</td>
                     </tr>
                     <tr>
-                        <td colspan="6" style="text-align:center;">... (인원수에 맞게 입력) ...</td>
+                        <td colspan="6" style="text-align:center;">(인원수에 맞게 입력)</td>
                     </tr>
                 </tbody>
             </table>
@@ -532,9 +532,9 @@
         
         function generateRandomLatinSquare(n) {
             const base = generateBaseLatinSquare(n);
-            const shuffledRows = shuffle([...Array(n).keys()]);
-            const shuffledCols = shuffle([...Array(n).keys()]);
-            const shuffledSymbols = shuffle([...Array(n).keys()]);
+            const shuffledRows = shuffle([…Array(n).keys()]);
+            const shuffledCols = shuffle([…Array(n).keys()]);
+            const shuffledSymbols = shuffle([…Array(n).keys()]);
 
             const randomSquare = Array(n).fill(null).map(() => Array(n));
             for (let i = 0; i < n; i++) {
@@ -556,7 +556,7 @@
                 const parts = cleanedLine.split('\t');
                 
                 if (parts.length !== 6) {
-                    throw new Error(`${index + 1}번째 줄의 형식이 올바르지 않습니다. 6개의 열(닉네임, 모험단, ...)이 필요합니다.`);
+                    throw new Error(`${index + 1}번째 줄의 형식이 올바르지 않습니다. 6개의 열(닉네임, 모험단, …)이 필요합니다.`);
                 }
                 
                 const nickname = parts[0];
@@ -599,8 +599,8 @@
             const mode = document.querySelector('input[name="mode"]:checked').value;
             
             statusDiv.className = 'status-info';
-            statusDiv.textContent = '최적 조합을 탐색 중입니다... (시간이 다소 소요될 수 있습니다)';
-            resultDiv.innerHTML = '<p>여러 조합을 비교하며 최상의 결과를 찾고 있습니다...</p>';
+            statusDiv.textContent = '최적 조합을 탐색 중입니다… (시간이 다소 소요될 수 있습니다)';
+            resultDiv.innerHTML = '<p>여러 조합을 비교하며 최상의 결과를 찾고 있습니다…</p>';
 
             setTimeout(() => {
                 try {
@@ -639,7 +639,7 @@
 
             while (validCompositionsFound < partySearchIterations && attempts < maxAttempts) {
                 attempts++;
-                const shuffledPlayers = shuffle([...players]);
+                const shuffledPlayers = shuffle([…players]);
                 const currentParties = [];
                 for (let i = 0; i < numParties; i++) {
                     currentParties.push(shuffledPlayers.slice(i * 4, (i + 1) * 4));
@@ -691,7 +691,7 @@
 
                 if (bestCombinationForParties && bestCombinationForParties.stats.stdDev < overallMinStdDev) {
                     overallMinStdDev = bestCombinationForParties.stats.stdDev;
-                    overallBestCombination = { ...bestCombinationForParties, parties: currentParties };
+                    overallBestCombination = { …bestCombinationForParties, parties: currentParties };
                 }
             }
 
