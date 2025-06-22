@@ -187,7 +187,7 @@
             margin-bottom: 8px;
         }
 
-        input[type="number"] {
+        input[type="number"], .input-group input[type="number"] {
             width: 120px;
             padding: 8px 12px;
             font-size: 14px;
@@ -197,7 +197,7 @@
             color: var(--text-color);
             transition: border-color 0.3s, background-color 0.3s;
         }
-        input[type="number"]:focus {
+        input[type="number"]:focus, .input-group input[type="number"]:focus {
             outline: none;
             border-color: var(--primary-color);
         }
@@ -373,6 +373,26 @@
             border-color: var(--primary-color);
         }
 
+        /* New styles for input group and hidden elements */
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+        .input-group label {
+            margin: 0;
+        }
+        .input-group input[type="checkbox"] {
+            margin-right: 5px;
+            width: auto; /* Override general input[type="number"] width */
+        }
+        .hidden {
+            display: none;
+        }
+
+
         @media (max-width: 1200px) {
             .content-wrapper {
                 grid-template-columns: 1fr;
@@ -385,12 +405,12 @@
     <div class="main-container">
         <header>
              <div class="theme-switch-wrapper">
-                <span class="theme-label">다크 모드</span>
-                <label class="theme-switch" for="darkModeToggle">
-                    <input type="checkbox" id="darkModeToggle" />
-                    <div class="slider round"></div>
-                </label>
-            </div>
+                 <span class="theme-label">다크 모드</span>
+                 <label class="theme-switch" for="darkModeToggle">
+                     <input type="checkbox" id="darkModeToggle" />
+                     <div class="slider round"></div>
+                 </label>
+             </div>
             <h1>공격대 파티 최적화 도구</h1>
             <p>인원수에 맞는 모드를 선택하고, 데이터를 기반으로 최적의 조합을 찾아냅니다.</p>
         </header>
@@ -404,7 +424,8 @@
                         <span class="tooltip-text">
                             닉네임과 모험단은 띄어쓰기 없이 붙여서 입력하세요.<br><br>
                             8인 및 12인 공대 구성으로 4인 공대 정보를 중복 입력하여 여러 기수를 운행 시 최적의 구성을 찾을 수 있습니다.<br>
-                            (모험단으로 동일 인물을 판별합니다.)
+                            (모험단으로 동일 인물을 판별합니다.)<br><br>
+                            *업둥버퍼: 파티 내 버프력이 가장 낮은 버퍼 (threshold 미만)
                         </span>
                     </span>
                 </h2>
@@ -426,18 +447,35 @@
                 <label for="updoongieThreshold">업둥버퍼 인식값</label>
                 <input type="number" id="updoongieThreshold" value="200">
 
-                <label for="updoongieCap">업둥버퍼 딜러 치환값</label>
-                <input type="number" id="updoongieCap" value="15">
+                <label style="margin-top: 20px;">업둥버퍼 딜러 치환 방식</label>
+                <div class="mode-selector" style="justify-content: flex-start;">
+                    <input type="radio" id="useFixedValue" name="updoongieConversionMethod" value="fixed" checked>
+                    <label for="useFixedValue">고정값</label>
+
+                    <input type="radio" id="useRatioValue" name="updoongieConversionMethod" value="ratio">
+                    <label for="useRatioValue">버프력 연동</label>
+                </div>
+
+                <div id="updoongieCapInputContainer">
+                    <label for="updoongieCap">업둥버퍼 딜러 고정 치환값</label>
+                    <input type="number" id="updoongieCap" value="15">
+                </div>
+
+                <div id="updoongieMultiplierInputContainer" class="hidden">
+                    <label for="updoongieBufferMultiplier">버프력 비례 배율(예: 0.05)</label>
+                    <input type="number" id="updoongieBufferMultiplier" value="0.05" step="0.01">
+                </div>
+
 
                 <button onclick="generateTeams()">최적 조합 생성</button>
                 <div id="status"></div>
             </div>
 
             <div class="card">
-                 <h2>생성 결과</h2>
-                 <div id="resultOutput">
-                     <p>결과가 여기에 표시됩니다.</p>
-                 </div>
+                <h2>생성 결과</h2>
+                <div id="resultOutput">
+                    <p>결과가 여기에 표시됩니다.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -512,6 +550,11 @@
 
     <script>
         // --- Helper Functions ---
+        /**
+         * 배열을 무작위로 섞는 함수 (Fisher-Yates 알고리즘)
+         * @param {Array} array - 섞을 배열
+         * @returns {Array} 섞인 배열
+         */
         function shuffle(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -520,6 +563,11 @@
             return array;
         }
 
+        /**
+         * 기본 라틴 방진을 생성하는 함수
+         * @param {number} n - 라틴 방진의 크기 (n x n)
+         * @returns {Array<Array<number>>} 기본 라틴 방진
+         */
         function generateBaseLatinSquare(n) {
             const square = Array(n).fill(null).map(() => Array(n));
             for (let i = 0; i < n; i++) {
@@ -530,6 +578,12 @@
             return square;
         }
         
+        /**
+         * 무작위 라틴 방진을 생성하는 함수 (파티원에게 역할을 할당하기 위해 사용)
+         * 각 행은 하나의 레이드, 각 열은 한 플레이어에게 할당될 역할
+         * @param {number} n - 라틴 방진의 크기 (4인 파티이므로 항상 4)
+         * @returns {Array<Array<number>>} 무작위 라틴 방진
+         */
         function generateRandomLatinSquare(n) {
             const base = generateBaseLatinSquare(n);
             const shuffledRows = shuffle([...Array(n).keys()]);
@@ -545,18 +599,27 @@
             return randomSquare;
         }
 
+        /**
+         * 엑셀 데이터를 파싱하여 플레이어 객체 배열로 변환하는 함수
+         * @param {string} text - 엑셀에서 복사된 문자열 데이터
+         * @param {number} expectedLines - 예상되는 데이터 줄 수
+         * @returns {Array<Object>} 파싱된 플레이어 데이터 배열
+         * @throws {Error} 데이터 형식 또는 줄 수가 올바르지 않을 경우
+         */
         function parseData(text, expectedLines) {
-            const lines = text.trim().split('\n');
+            const lines = text.trim().split('\n').filter(line => line.trim() !== ''); // 빈 줄 제거
             if (lines.length !== expectedLines) {
                 throw new Error(`${expectedLines}명의 데이터가 필요합니다. 현재 ${lines.length}개의 줄이 입력되었습니다.`);
             }
 
-            return lines.map((line, index) => {
-                const cleanedLine = line.trim().replace(/\s+/g, '\t');
+            // 중복 모험단 체크를 위한 Set
+            const uniqueGuilds = new Set();
+            const parsedPlayers = lines.map((line, index) => {
+                const cleanedLine = line.trim().replace(/\s+/g, '\t'); // 여러 공백을 탭으로 통일
                 const parts = cleanedLine.split('\t');
                 
                 if (parts.length !== 6) {
-                    throw new Error(`${index + 1}번째 줄의 형식이 올바르지 않습니다. 6개의 열(닉네임, 모험단, ...)이 필요합니다.`);
+                    throw new Error(`${index + 1}번째 줄의 형식이 올바르지 않습니다. 6개의 열(닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼)이 필요합니다.`);
                 }
                 
                 const nickname = parts[0];
@@ -567,11 +630,17 @@
                 const bufferPower = parseInt(parts[5], 10);
 
                 if ([mainDps, updoongie1, updoongie2, bufferPower].some(isNaN)) {
-                     throw new Error(`${index + 1}번째 줄('${nickname}')에 숫자로 변환할 수 없는 값이 있습니다.`);
+                    throw new Error(`${index + 1}번째 줄('${nickname}')에 숫자로 변환할 수 없는 값이 있습니다.`);
                 }
 
+                // 모험단 중복 체크
+                if (uniqueGuilds.has(guild)) {
+                    throw new Error(`동일한 모험단('${guild}')이 ${index + 1}번째 줄에 중복으로 존재합니다. 모험단은 고유해야 합니다.`);
+                }
+                uniqueGuilds.add(guild);
+
                 return {
-                    id: index,
+                    id: index, // 플레이어 고유 ID (인덱스 사용)
                     nickname: nickname,
                     guild: guild,
                     chars: {
@@ -582,16 +651,101 @@
                     }
                 };
             });
+            return parsedPlayers;
         }
 
+        /**
+         * 숫자 배열의 합계, 평균, 표준편차를 계산하는 함수
+         * @param {Array<number>} numbers - 숫자 배열
+         * @returns {Object} 합계, 평균, 표준편차를 포함하는 객체
+         */
         function calculateStats(numbers) {
+            if (numbers.length === 0) return { sum: 0, avg: 0, stdDev: 0 };
             const sum = numbers.reduce((a, b) => a + b, 0);
-            const avg = sum / numbers.length || 0;
-            const variance = numbers.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / numbers.length || 0;
+            const avg = sum / numbers.length;
+            const variance = numbers.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / numbers.length;
             const stdDev = Math.sqrt(variance);
             return { sum, avg, stdDev };
         }
         
+        /**
+         * 단일 파티의 시너지를 계산하고 각 플레이어의 최종/원래 값을 반환하는 함수
+         * @param {Array<Object>} partyPlayers - 현재 파티의 4명 플레이어 객체
+         * @param {Array<number>} scheduleRow - 현재 레이드에서의 역할 할당 스케줄 (예: [0, 1, 2, 3] -> 딜러, 업둥이1, 업둥이2, 버퍼)
+         * @param {Array<string>} charRoles - 역할 이름 배열 (예: ['딜러', '업둥이1', '업둥이2', '버퍼'])
+         * @param {number} updoongieCap - 업둥이 딜러 고정 치환값
+         * @param {number} updoongieThreshold - 업둥버퍼 인식 기준값
+         * @param {number} updoongieBufferMultiplier - 업둥버퍼 버프력 곱하기 비율
+         * @param {boolean} useUpdoongieRatio - 업둥버퍼 버프력에 비율을 사용할지 여부
+         * @returns {Object} 시너지 값과 각 플레이어의 역할별 최종/원래 값을 포함하는 객체
+         */
+        function calculatePartySynergy(partyPlayers, scheduleRow, charRoles, updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio) {
+            let dps_val = 0;
+            let up1_val = 0;
+            let up2_val = 0;
+            let buffer_val = 0;
+
+            const processedPlayers = []; // 각 플레이어의 처리된 값을 저장
+
+            for (let playerIndex = 0; playerIndex < 4; playerIndex++) {
+                const player = partyPlayers[playerIndex];
+                const role = charRoles[scheduleRow[playerIndex]];
+                const originalValue = player.chars[role];
+
+                let displayValue = originalValue;
+                let roleClass = '';
+                let isModified = false;
+
+                if (role === '딜러') {
+                    dps_val = originalValue;
+                    roleClass = 'role-dps';
+                } else if (role === '업둥이1' || role === '업둥이2') {
+                    roleClass = 'role-updoongie';
+                    if (originalValue > updoongieThreshold) { // 업둥이 딜러도 인식값 초과 시 치환 대상
+                        isModified = true;
+                        if (useUpdoongieRatio) {
+                            displayValue = originalValue * updoongieBufferMultiplier; // 비율 적용
+                        } else {
+                            displayValue = updoongieCap; // 고정값 적용
+                        }
+                    }
+                    if (role === '업둥이1') up1_val = displayValue;
+                    else if (role === '업둥이2') up2_val = displayValue;
+                } else if (role === '버퍼') {
+                    roleClass = 'role-buffer';
+                    if (originalValue < updoongieThreshold) { // 업둥버퍼인 경우 (인식값 미만)
+                        isModified = true;
+                        if (useUpdoongieRatio) {
+                            displayValue = originalValue * updoongieBufferMultiplier; // 비율 적용
+                        } else {
+                            displayValue = updoongieCap; // 고정값 적용
+                        }
+                    } else {
+                        // 업둥버퍼가 아닌 일반 버퍼
+                        displayValue = originalValue; // 원 값 유지
+                    }
+                    buffer_val = displayValue;
+                }
+
+                processedPlayers.push({
+                    player: player, // 원본 플레이어 객체 참조
+                    role: role,
+                    displayValue: displayValue,
+                    originalValue: originalValue,
+                    roleClass: roleClass,
+                    isModified: isModified
+                });
+            }
+
+            const partySynergy = (dps_val + up1_val + up2_val) * buffer_val;
+
+            return {
+                synergy: partySynergy,
+                processedPlayers: processedPlayers // 각 플레이어의 처리된 정보 반환
+            };
+        }
+
+
         // --- Core Logic ---
         function generateTeams() {
             const statusDiv = document.getElementById('status');
@@ -602,38 +756,68 @@
             statusDiv.textContent = '최적 조합을 탐색 중입니다... (시간이 다소 소요될 수 있습니다)';
             resultDiv.innerHTML = '<p>여러 조합을 비교하며 최상의 결과를 찾고 있습니다...</p>';
 
+            // UI 입력값 가져오기
+            const updoongieCap = parseInt(document.getElementById('updoongieCap').value, 10);
+            const updoongieThreshold = parseInt(document.getElementById('updoongieThreshold').value, 10);
+            // 라디오 버튼 선택 여부에 따라 useUpdoongieRatio 결정
+            const useUpdoongieRatio = document.getElementById('useRatioValue').checked;
+            const updoongieBufferMultiplier = parseFloat(document.getElementById('updoongieBufferMultiplier').value);
+
+            // 입력값 유효성 검사
+            if (isNaN(updoongieCap) && !useUpdoongieRatio) { // 고정 치환값 사용 시에는 반드시 숫자여야 함
+                statusDiv.className = 'status-error';
+                statusDiv.textContent = '오류: 업둥버퍼 딜러 고정 치환값이 숫자여야 합니다.';
+                return;
+            }
+            if (isNaN(updoongieThreshold)) {
+                statusDiv.className = 'status-error';
+                statusDiv.textContent = '오류: 업둥버퍼 인식값이 숫자여야 합니다.';
+                return;
+            }
+            if (isNaN(updoongieBufferMultiplier) && useUpdoongieRatio) { // 비율 사용 시에는 반드시 숫자여야 함
+                statusDiv.className = 'status-error';
+                statusDiv.textContent = '오류: 업둥버퍼 버프력 곱하기 비율이 숫자여야 합니다.';
+                return;
+            }
+
             setTimeout(() => {
                 try {
                     const excelData = document.getElementById('excelData').value;
-                    const updoongieCap = parseInt(document.getElementById('updoongieCap').value, 10);
-                    const updoongieThreshold = parseInt(document.getElementById('updoongieThreshold').value, 10);
-
-                    if (isNaN(updoongieCap)) throw new Error('업둥이 딜량 치환값은 숫자여야 합니다.');
-                    if (isNaN(updoongieThreshold)) throw new Error('업둥이 치환 기준값은 숫자여야 합니다.');
                     
                     if (mode === '12') {
-                        generate12PlayerTeams(excelData, updoongieCap, updoongieThreshold);
+                        generate12PlayerTeams(excelData, updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier);
                     } else if (mode === '8') {
-                        generate8PlayerTeams(excelData, updoongieCap, updoongieThreshold);
+                        generate8PlayerTeams(excelData, updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier);
                     } else {
-                        generate4PlayerTeam(excelData, updoongieCap, updoongieThreshold);
+                        generate4PlayerTeam(excelData, updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier);
                     }
                 } catch (e) {
                     statusDiv.className = 'status-error';
                     statusDiv.textContent = `오류: ${e.message}`;
                     resultDiv.innerHTML = `<p>오류가 발생했습니다. 입력 데이터를 확인해주세요.</p>`;
                 }
-            }, 100);
+            }, 100); // UI 업데이트를 위해 약간의 지연 부여
         }
 
-        function runCombinationFinder(players, numParties, updoongieCap, updoongieThreshold) {
+        /**
+         * 주어진 플레이어들로 여러 파티 조합을 찾아 최적의 시너지를 구성하는 핵심 로직
+         * @param {Array<Object>} players - 전체 플레이어 데이터
+         * @param {number} numParties - 구성할 파티의 수
+         * @param {number} updoongieCap - 업둥이 딜러 고정 치환값
+         * @param {number} updoongieThreshold - 업둥버퍼 인식 기준값
+         * @param {boolean} useUpdoongieRatio - 업둥버퍼 버프력에 비율을 사용할지 여부
+         * @param {number} updoongieBufferMultiplier - 업둥버퍼 버프력 곱하기 비율
+         * @returns {void} 결과를 HTML에 표시
+         * @throws {Error} 유효한 조합을 찾지 못하거나 데이터에 문제가 있을 경우
+         */
+        function runCombinationFinder(players, numParties, updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier) {
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
             let overallBestCombination = null;
             let overallMinStdDev = Infinity;
             
-            const partySearchIterations = 1000;
-            const scheduleSearchIterations = 1000;
-            const maxAttempts = partySearchIterations * 10;
+            const partySearchIterations = 2000; // 파티 구성 조합 탐색 횟수 (늘림)
+            const scheduleSearchIterations = 500; // 각 파티 구성 내 역할 스케줄 탐색 횟수 (늘림)
+            const maxAttempts = partySearchIterations * 10; // 무한 루프 방지용 최대 시도 횟수
             let validCompositionsFound = 0;
             let attempts = 0;
 
@@ -645,160 +829,223 @@
                     currentParties.push(shuffledPlayers.slice(i * 4, (i + 1) * 4));
                 }
 
+                // 1. 파티 구성의 유효성 검사 (동일 모험단 방지, 업둥버퍼 1명 제한)
                 const isCompositionValid = currentParties.every(party => {
+                    // 동일 모험단 소속 인원 체크
                     const guilds = new Set(party.map(p => p.guild));
-                    return guilds.size === party.length;
+                    if (guilds.size !== party.length) {
+                        return false;
+                    }
+
+                    // 파티 내 업둥버퍼 (버프력이 threshold 미만인 버퍼) 1명 이하 제한
+                    const lowPowerBuffersInParty = party.filter(p => p.chars['버퍼'] < updoongieThreshold).length;
+                    if (lowPowerBuffersInParty > 1) {
+                        return false;
+                    }
+                    return true;
                 });
 
                 if (!isCompositionValid) {
-                    continue;
+                    continue; // 유효하지 않은 파티 구성이면 다음 조합 시도
                 }
-                validCompositionsFound++;
+                validCompositionsFound++; // 유효한 파티 구성 찾음
 
                 let bestCombinationForParties = null;
                 let minStdDevForParties = Infinity;
+                let bestDetailedRaidPlayerResults = []; // 이 파티 조합의 상세 레이드 결과 저장
 
+                // 2. 각 파티 구성 내에서 역할 스케줄 탐색
                 for (let j = 0; j < scheduleSearchIterations; j++) {
-                    const partySchedules = currentParties.map(() => generateRandomLatinSquare(4));
-                    const allPartySynergies = [];
-                    
-                    for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
-                        for (let partyIndex = 0; partyIndex < numParties; partyIndex++) {
+                    const partySchedules = currentParties.map(() => generateRandomLatinSquare(4)); // 각 파티별 라틴 방진 생성
+                    const allRaidSynergies = []; // 전체 레이드의 시너지 값 저장
+                    const currentDetailedRaidPlayerResults = []; // 현재 스케줄 조합의 상세 레이드별 플레이어 결과
+
+                    for (let raidIndex = 0; raidIndex < 4; raidIndex++) { // 각 레이드 (총 4개)
+                        for (let partyIndex = 0; partyIndex < numParties; partyIndex++) { // 각 파티
                             const currentPartyPlayers = currentParties[partyIndex];
-                            const currentSchedule = partySchedules[partyIndex];
-                            let dps_val = 0, up1_val = 0, up2_val = 0, buffer_val = 0;
-                            for (let playerIndex = 0; playerIndex < 4; playerIndex++) {
-                                const player = currentPartyPlayers[playerIndex];
-                                const role = charRoles[currentSchedule[raidIndex][playerIndex]];
-                                if (role === '딜러') dps_val = player.chars['딜러'];
-                                else if (role === '업둥이1') up1_val = player.chars['업둥이1'];
-                                else if (role === '업둥이2') up2_val = player.chars['업둥이2'];
-                                else if (role === '버퍼') buffer_val = player.chars['버퍼'];
-                            }
-                            const cappedUp1 = up1_val > updoongieThreshold ? updoongieCap : up1_val;
-                            const cappedUp2 = up2_val > updoongieThreshold ? updoongieCap : up2_val;
-                            const partySynergy = (dps_val + cappedUp1 + cappedUp2) * buffer_val;
-                            allPartySynergies.push(partySynergy);
+                            const currentScheduleRow = partySchedules[partyIndex][raidIndex]; // 현재 파티의 현재 레이드 스케줄
+
+                            const synergyResult = calculatePartySynergy(
+                                currentPartyPlayers,
+                                currentScheduleRow,
+                                charRoles,
+                                updoongieCap,
+                                updoongieThreshold,
+                                updoongieBufferMultiplier,
+                                useUpdoongieRatio
+                            );
+                            allRaidSynergies.push(synergyResult.synergy);
+                            currentDetailedRaidPlayerResults.push(synergyResult.processedPlayers); // 상세 결과 저장
                         }
                     }
                     
-                    const stats = calculateStats(allPartySynergies);
+                    const stats = calculateStats(allRaidSynergies);
                     if (stats.stdDev < minStdDevForParties) {
                         minStdDevForParties = stats.stdDev;
-                        bestCombinationForParties = { schedules: partySchedules, synergies: allPartySynergies, stats: stats };
+                        bestCombinationForParties = { schedules: partySchedules, synergies: allRaidSynergies, stats: stats, currentParties: currentParties };
+                        bestDetailedRaidPlayerResults = currentDetailedRaidPlayerResults; // 최적의 상세 결과 업데이트
                     }
                 }
 
                 if (bestCombinationForParties && bestCombinationForParties.stats.stdDev < overallMinStdDev) {
                     overallMinStdDev = bestCombinationForParties.stats.stdDev;
-                    overallBestCombination = { ...bestCombinationForParties, parties: currentParties };
+                    overallBestCombination = { 
+                        ...bestCombinationForParties, 
+                        parties: currentParties,
+                        detailedRaidPlayerResults: bestDetailedRaidPlayerResults // 전체 최적 조합에 상세 결과 추가
+                    };
                 }
             }
 
             if (overallBestCombination) {
-                displayResults(overallBestCombination, players, charRoles, updoongieCap, updoongieThreshold);
+                displayResults(overallBestCombination, players); 
                 document.getElementById('status').className = 'status-success';
-                document.getElementById('status').textContent = `최적 조합 생성 완료!`;
+                document.getElementById('status').textContent = `최적 조합 생성 완료! (탐색 시도: ${attempts}회, 유효 조합: ${validCompositionsFound}개)`;
             } else {
-                throw new Error(`${numParties * 4}인 조합을 찾는 데 실패했습니다. 동일 모험단 인원이 많아 유효한 파티를 구성할 수 없습니다.`);
+                throw new Error(`${numParties * 4}인 조합을 찾는 데 실패했습니다. 데이터 확인 또는 조건을 완화해보세요 (동일 모험단 인원이 많거나, 업둥버퍼 제한이 너무 엄격할 수 있습니다).`);
             }
         }
         
-        function generate12PlayerTeams(excelData, updoongieCap, updoongieThreshold) {
+        /**
+         * 12인 공대 조합을 생성하는 함수
+         * @param {string} excelData - 엑셀 데이터
+         * @param {number} updoongieCap - 업둥이 딜러 고정 치환값
+         * @param {number} updoongieThreshold - 업둥버퍼 인식 기준값
+         * @param {boolean} useUpdoongieRatio - 업둥버퍼 버프력에 비율을 사용할지 여부
+         * @param {number} updoongieBufferMultiplier - 업둥버퍼 버프력 곱하기 비율
+         */
+        function generate12PlayerTeams(excelData, updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier) {
             const players = parseData(excelData, 12);
-            runCombinationFinder(players, 3, updoongieCap, updoongieThreshold);
+            runCombinationFinder(players, 3, updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier);
         }
 
-        function generate8PlayerTeams(excelData, updoongieCap, updoongieThreshold) {
+        /**
+         * 8인 공대 조합을 생성하는 함수
+         * @param {string} excelData - 엑셀 데이터
+         * @param {number} updoongieCap - 업둥이 딜러 고정 치환값
+         * @param {number} updoongieThreshold - 업둥버퍼 인식 기준값
+         * @param {boolean} useUpdoongieRatio - 업둥버퍼 버프력에 비율을 사용할지 여부
+         * @param {number} updoongieBufferMultiplier - 업둥버퍼 버프력 곱하기 비율
+         */
+        function generate8PlayerTeams(excelData, updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier) {
             const players = parseData(excelData, 8);
-            runCombinationFinder(players, 2, updoongieCap, updoongieThreshold);
+            runCombinationFinder(players, 2, updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier);
         }
         
-        function generate4PlayerTeam(excelData, updoongieCap, updoongieThreshold) {
+        /**
+         * 4인 공대 조합을 생성하는 함수 (단일 파티)
+         * @param {string} excelData - 엑셀 데이터
+         * @param {number} updoongieCap - 업둥이 딜러 고정 치환값
+         * @param {number} updoongieThreshold - 업둥버퍼 인식 기준값
+         * @param {boolean} useUpdoongieRatio - 업둥버퍼 버프력에 비율을 사용할지 여부
+         * @param {number} updoongieBufferMultiplier - 업둥버퍼 버프력 곱하기 비율
+         */
+        function generate4PlayerTeam(excelData, updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier) {
             const players = parseData(excelData, 4);
+            
+            // 4인 모드에서는 파티 내 동일 모험단 허용 불가
             const guilds = new Set(players.map(p => p.guild));
             if (guilds.size < players.length) {
                 throw new Error('4인 파티 모드에서는 동일한 모험단 소속 인원이 있을 수 없습니다.');
             }
-            
+
+            // 4인 모드에서 업둥버퍼 1명 초과 여부 확인
+            const lowPowerBuffersInParty = players.filter(p => p.chars['버퍼'] < updoongieThreshold).length;
+            if (lowPowerBuffersInParty > 1) {
+                throw new Error(`4인 파티에 업둥버퍼 인식값(${updoongieThreshold}) 미만 버퍼가 2명 이상 존재합니다. 최대 1명만 허용됩니다.`);
+            }
+
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
             let bestCombination = null;
             let minStdDev = Infinity;
             
-            const scheduleSearchIterations = 20000;
+            const scheduleSearchIterations = 20000; // 4인 파티는 조합 수가 적으므로 더 많이 탐색
 
             for (let i = 0; i < scheduleSearchIterations; i++) {
                 const schedule = generateRandomLatinSquare(4);
                 const raidSynergies = [];
-                
+                const raidDetailedPlayerResults = []; // 각 레이드별 상세 결과를 저장 (processedPlayers 배열)
+
                 for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
-                    let dps_val = 0, up1_val = 0, up2_val = 0, buffer_val = 0;
-                    for (let playerIndex = 0; playerIndex < 4; playerIndex++) {
-                        const player = players[playerIndex];
-                        const role = charRoles[schedule[raidIndex][playerIndex]];
-                        if (role === '딜러') dps_val = player.chars['딜러'];
-                        else if (role === '업둥이1') up1_val = player.chars['업둥이1'];
-                        else if (role === '업둥이2') up2_val = player.chars['업둥이2'];
-                        else if (role === '버퍼') buffer_val = player.chars['버퍼'];
-                    }
-                    const cappedUp1 = up1_val > updoongieThreshold ? updoongieCap : up1_val;
-                    const cappedUp2 = up2_val > updoongieThreshold ? updoongieCap : up2_val;
-                    const partySynergy = (dps_val + cappedUp1 + cappedUp2) * buffer_val;
-                    raidSynergies.push(partySynergy);
+                    const synergyResult = calculatePartySynergy(
+                        players, // 4인 파티이므로 전체 players가 곧 partyPlayers
+                        schedule[raidIndex], // 현재 레이드의 역할 할당 스케줄
+                        charRoles,
+                        updoongieCap,
+                        updoongieThreshold,
+                        updoongieBufferMultiplier,
+                        useUpdoongieRatio
+                    );
+                    raidSynergies.push(synergyResult.synergy);
+                    raidDetailedPlayerResults.push(synergyResult.processedPlayers); // 상세 결과 저장
                 }
                 
                 const stats = calculateStats(raidSynergies);
                 if (stats.stdDev < minStdDev) {
                     minStdDev = stats.stdDev;
                     bestCombination = { 
-                        parties: [players], 
+                        parties: [players], // 단일 파티이므로 players 전체를 묶음
                         schedules: [schedule], 
                         synergies: raidSynergies, 
-                        stats: stats 
+                        stats: stats,
+                        detailedRaidPlayerResults: raidDetailedPlayerResults // 상세 결과 추가
                     };
                 }
             }
             if (bestCombination) {
-                displayResults(bestCombination, players, charRoles, updoongieCap, updoongieThreshold);
+                displayResults(bestCombination, players);
                 document.getElementById('status').className = 'status-success';
                 document.getElementById('status').textContent = `최적 조합 생성 완료!`;
-            } else { throw new Error('4인 조합을 찾는 데 실패했습니다.'); }
+            } else { 
+                throw new Error('4인 조합을 찾는 데 실패했습니다.'); 
+            }
         }
 
         // --- Display and Interaction ---
-        function displayResults(combination, allPlayers, charRoles, updoongieCap, updoongieThreshold) {
+        /**
+         * 계산된 최적 조합 결과를 HTML 테이블로 표시하는 함수
+         * @param {Object} combination - 최적 조합 객체
+         * @param {Array<Object>} allPlayers - 전체 플레이어 데이터 (resultsGrid의 키 매핑용)
+         */
+        function displayResults(combination, allPlayers) {
             const resultDiv = document.getElementById('resultOutput');
-            const { parties, schedules, stats, synergies } = combination;
+            const { parties, stats, synergies, detailedRaidPlayerResults } = combination;
             const numParties = parties.length;
 
+            // 결과를 그리드 형태로 저장 (플레이어 ID -> 레이드별 역할/값)
             const resultsGrid = {}; 
-            allPlayers.forEach(p => resultsGrid[p.id] = Array(4));
+            allPlayers.forEach(p => resultsGrid[p.id] = Array(4).fill(null));
 
-            for (let partyIndex = 0; partyIndex < numParties; partyIndex++) {
-                for (let playerIndexInParty = 0; playerIndexInParty < 4; playerIndexInParty++) {
-                    for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
-                        const player = parties[partyIndex][playerIndexInParty];
-                        const schedule = schedules[partyIndex];
-                        const roleName = charRoles[schedule[raidIndex][playerIndexInParty]];
-                        const originalValue = player.chars[roleName];
-                        let displayValue = originalValue;
-                        let roleClass = '';
-
-                        if (roleName === '딜러') roleClass = 'role-dps';
-                        else if (roleName === '버퍼') roleClass = 'role-buffer';
-                        else {
-                            roleClass = 'role-updoongie';
-                            if (originalValue > updoongieThreshold) displayValue = updoongieCap;
-                        }
-                        
-                        resultsGrid[player.id][raidIndex] = {
-                            value: displayValue,
-                            originalValue: originalValue, 
-                            class: roleClass
-                        };
-                    }
+            // detailedRaidPlayerResults는 모든 레이드-파티 조합에 대한 상세 정보를 플랫하게 담고 있음
+            // 예: [레이드1-파티1 플레이어들, 레이드1-파티2 플레이어들, ... 레이드4-파티N 플레이어들]
+            // 이를 partyIndex와 raidIndex로 접근하기 쉽게 재구성
+            const organizedRaidResults = Array(numParties).fill(null).map(() => Array(4).fill(null));
+            let detailIdx = 0;
+            for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
+                for (let partyIndex = 0; partyIndex < numParties; partyIndex++) {
+                    organizedRaidResults[partyIndex][raidIndex] = detailedRaidPlayerResults[detailIdx];
+                    detailIdx++;
                 }
             }
+            
+            // resultsGrid 채우기: 각 플레이어의 각 레이드에서의 최종 표시 값, 원본 값, 클래스, 수정 여부
+            parties.forEach((party, partyIdx) => {
+                party.forEach((player, playerIdxInParty) => {
+                    for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
+                        // organizedRaidResults에서 해당 플레이어의 처리된 데이터를 찾음
+                        const processedPlayerData = organizedRaidResults[partyIdx][raidIndex].find(pp => pp.player.id === player.id);
+                        
+                        if (processedPlayerData) {
+                             resultsGrid[player.id][raidIndex] = {
+                                value: processedPlayerData.displayValue,
+                                originalValue: processedPlayerData.originalValue, 
+                                class: processedPlayerData.roleClass,
+                                isModified: processedPlayerData.isModified
+                            };
+                        }
+                    }
+                });
+            });
 
             let tableHtml = `
                 <div class="result-summary">
@@ -819,34 +1066,44 @@
                     </thead>
                     <tbody>`;
             
-            parties.flat().forEach((player, index) => {
-                tableHtml += `<tr>`;
-                if (index % 4 === 0) {
-                    const partyNum = Math.floor(index / 4) + 1;
-                    tableHtml += `<td class="party-col" rowspan="5">${partyNum}파티</td>`;
-                }
-                tableHtml += `<td class="nickname-col">${player.nickname}</td>`;
-                tableHtml += `<td class="guild-col">${player.guild}</td>`;
-                for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
-                    const cellData = resultsGrid[player.id][raidIndex];
-                    let cellContent = cellData.value.toLocaleString('ko-KR');
-                    if (cellData.class.includes('updoongie') && cellData.value !== cellData.originalValue) {
-                         cellContent += ` <span style="font-size:0.85em; color:var(--text-muted-color);">(${cellData.originalValue.toLocaleString('ko-KR')})</span>`;
+            // 파티원들을 순회하며 테이블 행 생성
+            // parties는 배열의 배열 ([[party1_players], [party2_players], ...]) 형태
+            parties.forEach((party, partyIdx) => {
+                party.forEach((player, playerIdxInParty) => {
+                    tableHtml += `<tr>`;
+                    if (playerIdxInParty === 0) { // 각 파티의 첫 번째 행에만 rowspan 적용
+                        tableHtml += `<td class="party-col" rowspan="5">${partyIdx + 1}파티</td>`;
                     }
-                    tableHtml += `<td class="${cellData.class}">${cellContent}</td>`;
-                }
-                tableHtml += `</tr>`;
-                
-                if (index % 4 === 3) {
-                    const partyIndex = Math.floor(index / 4);
-                    tableHtml += `<tr class="party-synergy-row">`;
-                    tableHtml += `<td colspan="2" class="synergy-label">딜 * 버프력</td>`;
+                    tableHtml += `<td class="nickname-col">${player.nickname}</td>`;
+                    tableHtml += `<td class="guild-col">${player.guild}</td>`;
                     for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
-                        const synergyValue = synergies[raidIndex * numParties + partyIndex];
-                        tableHtml += `<td>${synergyValue.toLocaleString('ko-KR', {maximumFractionDigits: 0})}</td>`;
+                        const cellData = resultsGrid[player.id][raidIndex];
+                        let cellContent;
+
+                        // 치환된 값은 내림 처리 후 자연수로 표시
+                        if (cellData.isModified) {
+                            cellContent = Math.floor(cellData.value).toLocaleString('ko-KR', { maximumFractionDigits: 0 });
+                        } else {
+                            cellContent = cellData.value.toLocaleString('ko-KR', { maximumFractionDigits: 0 }); 
+                        }
+                        
+                        if (cellData.isModified) {
+                            cellContent += ` <span style="font-size:0.85em; color:var(--text-muted-color);">(${cellData.originalValue.toLocaleString('ko-KR', { maximumFractionDigits: 0 })})</span>`;
+                        }
+                        tableHtml += `<td class="${cellData.class}">${cellContent}</td>`;
                     }
                     tableHtml += `</tr>`;
+                });
+                
+                // 각 파티의 마지막 플레이어 후에 파티 시너지 행 추가
+                tableHtml += `<tr class="party-synergy-row">`;
+                tableHtml += `<td colspan="2" class="synergy-label">딜 * 버프력</td>`;
+                for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
+                    // synergies 배열은 (raidIndex * numParties + partyIndex) 순서로 저장됨
+                    const synergyValue = synergies[raidIndex * numParties + partyIdx];
+                    tableHtml += `<td>${synergyValue.toLocaleString('ko-KR', {maximumFractionDigits: 0})}</td>`;
                 }
+                tableHtml += `</tr>`;
             });
             
             tableHtml += `</tbody></table>`;
@@ -854,6 +1111,7 @@
         }
 
         // --- Event Listeners ---
+        // 모드 변경 시 textarea placeholder 변경
         document.querySelectorAll('input[name="mode"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
                 let placeholderText = "";
@@ -861,16 +1119,18 @@
                 if (value === '12') {
                     placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요.";
                 } else if (value === '8') {
-                     placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 8줄 데이터를 복사하여 여기에 붙여넣으세요.";
-                } else {
+                    placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 8줄 데이터를 복사하여 여기에 붙여넣으세요.";
+                } else { // value === '4'
                     placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 4줄 데이터를 복사하여 여기에 붙여넣으세요.";
                 }
                 document.getElementById('excelData').placeholder = placeholderText;
             });
         });
 
+        // 다크 모드 토글 기능
         const darkModeToggle = document.getElementById('darkModeToggle');
         
+        // 페이지 로드 시 저장된 테마 설정 적용
         if (localStorage.getItem('theme') === 'dark') {
             document.body.classList.add('dark-mode');
             darkModeToggle.checked = true;
@@ -885,6 +1145,29 @@
                 localStorage.setItem('theme', 'light');
             }
         });
+
+        // 업둥버퍼 비율 사용 토글 시 입력 필드 가시성 변경
+        const useFixedValueRadio = document.getElementById('useFixedValue');
+        const useRatioValueRadio = document.getElementById('useRatioValue');
+        const updoongieCapInputContainer = document.getElementById('updoongieCapInputContainer');
+        const updoongieMultiplierInputContainer = document.getElementById('updoongieMultiplierInputContainer');
+
+        function toggleUpdoongieInputs() {
+            if (useFixedValueRadio.checked) {
+                updoongieCapInputContainer.classList.remove('hidden');
+                updoongieMultiplierInputContainer.classList.add('hidden');
+            } else if (useRatioValueRadio.checked) {
+                updoongieCapInputContainer.classList.add('hidden');
+                updoongieMultiplierInputContainer.classList.remove('hidden');
+            }
+        }
+
+        // 초기 로드 시 가시성 설정
+        toggleUpdoongieInputs(); 
+
+        // 라디오 버튼 변경 시 가시성 토글
+        useFixedValueRadio.addEventListener('change', toggleUpdoongieInputs);
+        useRatioValueRadio.addEventListener('change', toggleUpdoongieInputs);
 
     </script>
 </body>
