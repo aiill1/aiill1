@@ -694,14 +694,16 @@
 
                 let displayValue = originalValue;
                 let roleClass = '';
-                let isModified = false;
+                let isModified = false; // 값이 치환되었는지 여부를 나타내는 플래그
 
                 if (role === '딜러') {
                     dps_val = originalValue;
                     roleClass = 'role-dps';
                 } else if (role === '업둥이1' || role === '업둥이2') {
                     roleClass = 'role-updoongie';
-                    if (originalValue > updoongieThreshold) { // 업둥이 딜러도 인식값 초과 시 치환 대상
+                    // 업둥이 딜러도 인식값 초과 시 치환 대상
+                    // (사용자가 '업둥버퍼'로 인지하는 케이스)
+                    if (originalValue > updoongieThreshold) {
                         isModified = true;
                         if (useUpdoongieRatio) {
                             displayValue = originalValue * updoongieBufferMultiplier; // 비율 적용
@@ -713,7 +715,9 @@
                     else if (role === '업둥이2') up2_val = displayValue;
                 } else if (role === '버퍼') {
                     roleClass = 'role-buffer';
-                    if (originalValue < updoongieThreshold) { // 업둥버퍼인 경우 (인식값 미만)
+                    // 버퍼가 업둥버퍼인 경우 (인식값 미만)
+                    // (사용자가 '업둥버퍼'로 인지하는 케이스)
+                    if (originalValue < updoongieThreshold) { 
                         isModified = true;
                         if (useUpdoongieRatio) {
                             displayValue = originalValue * updoongieBufferMultiplier; // 비율 적용
@@ -733,7 +737,7 @@
                     displayValue: displayValue,
                     originalValue: originalValue,
                     roleClass: roleClass,
-                    isModified: isModified
+                    isModified: isModified // 값이 변환되었는지 여부
                 });
             }
 
@@ -829,26 +833,15 @@
                     currentParties.push(shuffledPlayers.slice(i * 4, (i + 1) * 4));
                 }
 
-                // 1. 파티 구성의 유효성 검사 (동일 모험단 방지, 업둥버퍼 1명 제한)
+                // 1. 파티 구성의 유효성 검사 (동일 모험단 방지)
                 const isCompositionValid = currentParties.every(party => {
-                    // 동일 모험단 소속 인원 체크
                     const guilds = new Set(party.map(p => p.guild));
-                    if (guilds.size !== party.length) {
-                        return false;
-                    }
-
-                    // 파티 내 업둥버퍼 (버프력이 threshold 미만인 버퍼) 1명 이하 제한
-                    const lowPowerBuffersInParty = party.filter(p => p.chars['버퍼'] < updoongieThreshold).length;
-                    if (lowPowerBuffersInParty > 1) {
-                        return false;
-                    }
-                    return true;
+                    return guilds.size === party.length;
                 });
 
                 if (!isCompositionValid) {
-                    continue; // 유효하지 않은 파티 구성이면 다음 조합 시도
+                    continue; // 유효하지 않은 파티 구성이면 다음 조합 시도 (모험단 중복)
                 }
-                validCompositionsFound++; // 유효한 파티 구성 찾음
 
                 let bestCombinationForParties = null;
                 let minStdDevForParties = Infinity;
@@ -859,6 +852,7 @@
                     const partySchedules = currentParties.map(() => generateRandomLatinSquare(4)); // 각 파티별 라틴 방진 생성
                     const allRaidSynergies = []; // 전체 레이드의 시너지 값 저장
                     const currentDetailedRaidPlayerResults = []; // 현재 스케줄 조합의 상세 레이드별 플레이어 결과
+                    let isValidScheduleCombination = true; // 현재 스케줄 조합이 모든 파티/레이드에 유효한지 확인하는 플래그
 
                     for (let raidIndex = 0; raidIndex < 4; raidIndex++) { // 각 레이드 (총 4개)
                         for (let partyIndex = 0; partyIndex < numParties; partyIndex++) { // 각 파티
@@ -874,11 +868,27 @@
                                 updoongieBufferMultiplier,
                                 useUpdoongieRatio
                             );
+
+                            // 파티 내에 값이 치환된(업둥버퍼로 인지되는) 캐릭터가 1명을 초과하는지 확인
+                            const modifiedPlayersInRaidParty = synergyResult.processedPlayers.filter(p => p.isModified).length;
+                            if (modifiedPlayersInRaidParty > 1) {
+                                isValidScheduleCombination = false; // 현재 파티-레이드 조합이 유효하지 않음
+                                break; // 현재 파티 내 다른 캐릭터를 확인할 필요 없음, 다음 파티로 이동
+                            }
+
                             allRaidSynergies.push(synergyResult.synergy);
                             currentDetailedRaidPlayerResults.push(synergyResult.processedPlayers); // 상세 결과 저장
                         }
+                        if (!isValidScheduleCombination) {
+                            break; // 현재 레이드 내에서 유효하지 않은 파티가 발견되면 이 레이드의 다른 파티도 확인할 필요 없음
+                        }
                     }
-                    
+
+                    if (!isValidScheduleCombination) {
+                        continue; // 현재 스케줄 조합이 유효하지 않으면 다음 스케줄 조합 시도
+                    }
+
+                    // 모든 파티와 레이드에 대해 유효한 스케줄 조합인 경우
                     const stats = calculateStats(allRaidSynergies);
                     if (stats.stdDev < minStdDevForParties) {
                         minStdDevForParties = stats.stdDev;
@@ -887,20 +897,23 @@
                     }
                 }
 
-                if (bestCombinationForParties && bestCombinationForParties.stats.stdDev < overallMinStdDev) {
-                    overallMinStdDev = bestCombinationForParties.stats.stdDev;
-                    overallBestCombination = { 
-                        ...bestCombinationForParties, 
-                        parties: currentParties,
-                        detailedRaidPlayerResults: bestDetailedRaidPlayerResults // 전체 최적 조합에 상세 결과 추가
-                    };
+                if (bestCombinationForParties) { // 이 파티 구성에 대해 유효한 스케줄 조합을 찾았을 경우만 카운트
+                    validCompositionsFound++;
+                    if (bestCombinationForParties.stats.stdDev < overallMinStdDev) {
+                        overallMinStdDev = bestCombinationForParties.stats.stdDev;
+                        overallBestCombination = { 
+                            ...bestCombinationForParties, 
+                            parties: currentParties,
+                            detailedRaidPlayerResults: bestDetailedRaidPlayerResults // 전체 최적 조합에 상세 결과 추가
+                        };
+                    }
                 }
             }
 
             if (overallBestCombination) {
                 displayResults(overallBestCombination, players); 
                 document.getElementById('status').className = 'status-success';
-                document.getElementById('status').textContent = `최적 조합 생성 완료! (탐색 시도: ${attempts}회, 유효 조합: ${validCompositionsFound}개)`;
+                document.getElementById('status').textContent = `최적 조합 생성 완료! (탐색 시도: ${attempts}회, 유효 파티 조합: ${validCompositionsFound}개)`;
             } else {
                 throw new Error(`${numParties * 4}인 조합을 찾는 데 실패했습니다. 데이터 확인 또는 조건을 완화해보세요 (동일 모험단 인원이 많거나, 업둥버퍼 제한이 너무 엄격할 수 있습니다).`);
             }
@@ -949,12 +962,6 @@
                 throw new Error('4인 파티 모드에서는 동일한 모험단 소속 인원이 있을 수 없습니다.');
             }
 
-            // 4인 모드에서 업둥버퍼 1명 초과 여부 확인
-            const lowPowerBuffersInParty = players.filter(p => p.chars['버퍼'] < updoongieThreshold).length;
-            if (lowPowerBuffersInParty > 1) {
-                throw new Error(`4인 파티에 업둥버퍼 인식값(${updoongieThreshold}) 미만 버퍼가 2명 이상 존재합니다. 최대 1명만 허용됩니다.`);
-            }
-
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
             let bestCombination = null;
             let minStdDev = Infinity;
@@ -965,6 +972,7 @@
                 const schedule = generateRandomLatinSquare(4);
                 const raidSynergies = [];
                 const raidDetailedPlayerResults = []; // 각 레이드별 상세 결과를 저장 (processedPlayers 배열)
+                let isValidSchedule = true; // 현재 스케줄이 유효한지 여부
 
                 for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                     const synergyResult = calculatePartySynergy(
@@ -976,10 +984,22 @@
                         updoongieBufferMultiplier,
                         useUpdoongieRatio
                     );
+                    
+                    // 파티 내에 값이 치환된(업둥버퍼로 인지되는) 캐릭터가 1명을 초과하는지 확인
+                    const modifiedPlayersInRaidParty = synergyResult.processedPlayers.filter(p => p.isModified).length;
+                    if (modifiedPlayersInRaidParty > 1) {
+                        isValidSchedule = false; // 현재 레이드에서 유효하지 않은 스케줄
+                        break; // 현재 스케줄의 다른 레이드를 확인할 필요 없음
+                    }
+
                     raidSynergies.push(synergyResult.synergy);
                     raidDetailedPlayerResults.push(synergyResult.processedPlayers); // 상세 결과 저장
                 }
                 
+                if (!isValidSchedule) {
+                    continue; // 현재 스케줄이 유효하지 않으면 다음 스케줄 시도
+                }
+
                 const stats = calculateStats(raidSynergies);
                 if (stats.stdDev < minStdDev) {
                     minStdDev = stats.stdDev;
@@ -997,7 +1017,7 @@
                 document.getElementById('status').className = 'status-success';
                 document.getElementById('status').textContent = `최적 조합 생성 완료!`;
             } else { 
-                throw new Error('4인 조합을 찾는 데 실패했습니다.'); 
+                throw new Error('4인 조합을 찾는 데 실패했습니다. 데이터 확인 또는 조건을 완화해보세요.'); 
             }
         }
 
@@ -1037,11 +1057,11 @@
                         
                         if (processedPlayerData) {
                              resultsGrid[player.id][raidIndex] = {
-                                value: processedPlayerData.displayValue,
-                                originalValue: processedPlayerData.originalValue, 
-                                class: processedPlayerData.roleClass,
-                                isModified: processedPlayerData.isModified
-                            };
+                                 value: processedPlayerData.displayValue,
+                                 originalValue: processedPlayerData.originalValue, 
+                                 class: processedPlayerData.roleClass,
+                                 isModified: processedPlayerData.isModified
+                             };
                         }
                     }
                 });
