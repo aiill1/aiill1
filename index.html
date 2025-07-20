@@ -865,30 +865,52 @@
             }, 100);
         }
 
-        /**
-         * NEW: Hybrid (Simulated Annealing + Hill Climbing) combination finder
-         * Finds a near-optimal party composition by first exploring globally (SA)
-         * and then fine-tuning locally (HC).
-         */
         function runCombinationFinder(players, numParties, updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier) {
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
+            let overallBestCombination = null;
+            let overallMinStdDev = Infinity;
+            
+            const partySearchIterations = 2000;
+            const scheduleSearchIterations = 500;
+            const maxAttempts = partySearchIterations * 10;
+            let validCompositionsFound = 0;
+            let attempts = 0;
 
-            // --- Optimization Algorithm ---
+            while (validCompositionsFound < partySearchIterations && attempts < maxAttempts) {
+                attempts++;
+                const shuffledPlayers = shuffle([...players]);
+                const currentParties = [];
+                for (let i = 0; i < numParties; i++) {
+                    currentParties.push(shuffledPlayers.slice(i * 4, (i + 1) * 4));
+                }
 
-            // 1. Cost function: Calculate the "energy" (std deviation) of a given party composition.
-            function calculateCompositionEnergy(parties, iterations) {
+                const isCompositionValid = currentParties.every(party => {
+                    const guilds = new Set(party.map(p => p.guild));
+                    return guilds.size === party.length;
+                });
+
+                if (!isCompositionValid) {
+                    continue;
+                }
+
+                let bestCombinationForParties = null;
                 let minStdDevForParties = Infinity;
-                
-                for (let j = 0; j < iterations; j++) {
-                    const partySchedules = parties.map(() => generateRandomLatinSquare(4));
+                let bestDetailedRaidPlayerResults = [];
+
+                for (let j = 0; j < scheduleSearchIterations; j++) {
+                    const partySchedules = currentParties.map(() => generateRandomLatinSquare(4));
                     const allRaidSynergies = [];
+                    const currentDetailedRaidPlayerResults = [];
                     let isValidScheduleCombination = true;
 
                     for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                         for (let partyIndex = 0; partyIndex < numParties; partyIndex++) {
+                            const currentPartyPlayers = currentParties[partyIndex];
+                            const currentScheduleRow = partySchedules[partyIndex][raidIndex];
+
                             const synergyResult = calculatePartySynergy(
-                                parties[partyIndex],
-                                partySchedules[partyIndex][raidIndex],
+                                currentPartyPlayers,
+                                currentScheduleRow,
                                 charRoles,
                                 updoongieCap,
                                 updoongieThreshold,
@@ -896,160 +918,51 @@
                                 useUpdoongieRatio
                             );
 
-                            if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) {
+                            const modifiedPlayersInRaidParty = synergyResult.processedPlayers.filter(p => p.isModified).length;
+                            if (modifiedPlayersInRaidParty > 1) {
                                 isValidScheduleCombination = false;
                                 break;
                             }
+
                             allRaidSynergies.push(synergyResult.synergy);
+                            currentDetailedRaidPlayerResults.push(synergyResult.processedPlayers);
                         }
-                        if (!isValidScheduleCombination) break;
-                    }
-
-                    if (isValidScheduleCombination) {
-                        const stats = calculateStats(allRaidSynergies);
-                        if (stats.stdDev < minStdDevForParties) {
-                            minStdDevForParties = stats.stdDev;
-                        }
-                    }
-                }
-                return minStdDevForParties === Infinity ? 999999999 : minStdDevForParties;
-            }
-
-            // 2. Function to create a "neighbor" solution by swapping two players.
-            function createNeighbor(parties) {
-                const newParties = JSON.parse(JSON.stringify(parties));
-                if (numParties < 2) return newParties;
-                let pIdx1 = Math.floor(Math.random() * numParties);
-                let pIdx2 = (pIdx1 + 1 + Math.floor(Math.random() * (numParties - 1))) % numParties;
-                const player1 = Math.floor(Math.random() * 4);
-                const player2 = Math.floor(Math.random() * 4);
-                [newParties[pIdx1][player1], newParties[pIdx2][player2]] = [newParties[pIdx2][player2], newParties[pIdx1][player1]];
-                return newParties;
-            }
-            
-            // Function to check if a composition is valid (no guild dupes).
-            function isCompositionValid(parties) {
-                return parties.every(party => new Set(party.map(p => p.guild)).size === party.length);
-            }
-
-            // 3. Find a valid initial random solution
-            let currentSolution;
-            for (let i = 0; i < 5000; i++) {
-                const shuffledPlayers = shuffle([...players]);
-                currentSolution = [];
-                for (let j = 0; j < numParties; j++) {
-                    currentSolution.push(shuffledPlayers.slice(j * 4, (j + 1) * 4));
-                }
-                if (isCompositionValid(currentSolution)) break;
-                if (i === 4999) throw new Error(`유효한 초기 파티 조합을 찾을 수 없습니다. 동일 모험단 소속 인원이 너무 많지 않은지 확인해주세요.`);
-            }
-
-            // --- Phase 1: Simulated Annealing (Global Search) ---
-            let bestSolution = JSON.parse(JSON.stringify(currentSolution));
-            const scheduleIterationsSA = 200; // Fewer iterations for speed during SA
-            let currentEnergy = calculateCompositionEnergy(currentSolution, scheduleIterationsSA);
-            let bestEnergy = currentEnergy;
-
-            let temp = 10000.0;
-            const coolingRate = 0.995;
-            let saAttempts = 0;
-
-            while (temp > 1.0) {
-                saAttempts++;
-                let newSolution;
-                for (let i = 0; i < 100; i++) { // Try to find a valid neighbor
-                    newSolution = createNeighbor(currentSolution);
-                    if (isCompositionValid(newSolution)) break;
-                    newSolution = null;
-                }
-                if (!newSolution) { temp *= coolingRate; continue; }
-
-                const newEnergy = calculateCompositionEnergy(newSolution, scheduleIterationsSA);
-                if (newEnergy < currentEnergy || Math.exp((currentEnergy - newEnergy) / temp) > Math.random()) {
-                    currentSolution = newSolution;
-                    currentEnergy = newEnergy;
-                }
-                if (currentEnergy < bestEnergy) {
-                    bestEnergy = currentEnergy;
-                    bestSolution = currentSolution;
-                }
-                temp *= coolingRate;
-            }
-
-            // --- Phase 2: Hill Climbing (Local Search) ---
-            let hcImprovements = 0;
-            for (let i = 0; i < 500; i++) { // Attempt to find a better neighbor 500 times in a row
-                let neighborSolution;
-                 for (let j = 0; j < 100; j++) { // Try to find a valid neighbor
-                    neighborSolution = createNeighbor(bestSolution);
-                    if (isCompositionValid(neighborSolution)) break;
-                    neighborSolution = null;
-                }
-                if (!neighborSolution) continue;
-
-                const neighborEnergy = calculateCompositionEnergy(neighborSolution, scheduleIterationsSA);
-                if (neighborEnergy < bestEnergy) {
-                    bestSolution = neighborSolution;
-                    bestEnergy = neighborEnergy;
-                    hcImprovements++;
-                    i = 0; // Reset counter on improvement
-                }
-            }
-            
-            // 4. Final calculation with the best found solution for accurate display
-            let finalBestCombination = null;
-            let minStdDev = Infinity;
-            const finalScheduleSearchIterations = 2500; 
-
-            for (let j = 0; j < finalScheduleSearchIterations; j++) {
-                const partySchedules = bestSolution.map(() => generateRandomLatinSquare(4));
-                const allRaidSynergies = [];
-                const currentDetailedRaidPlayerResults = [];
-                let isValidScheduleCombination = true;
-
-                for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
-                    for (let partyIndex = 0; partyIndex < numParties; partyIndex++) {
-                         const synergyResult = calculatePartySynergy(
-                            bestSolution[partyIndex],
-                            partySchedules[partyIndex][raidIndex],
-                            charRoles,
-                            updoongieCap,
-                            updoongieThreshold,
-                            updoongieBufferMultiplier,
-                            useUpdoongieRatio
-                        );
-
-                        if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) {
-                            isValidScheduleCombination = false;
+                        if (!isValidScheduleCombination) {
                             break;
                         }
-                        allRaidSynergies.push(synergyResult.synergy);
-                        currentDetailedRaidPlayerResults.push(synergyResult.processedPlayers);
                     }
-                    if (!isValidScheduleCombination) break;
+
+                    if (!isValidScheduleCombination) {
+                        continue;
+                    }
+
+                    const stats = calculateStats(allRaidSynergies);
+                    if (stats.stdDev < minStdDevForParties) {
+                        minStdDevForParties = stats.stdDev;
+                        bestCombinationForParties = { schedules: partySchedules, synergies: allRaidSynergies, stats: stats, currentParties: currentParties };
+                        bestDetailedRaidPlayerResults = currentDetailedRaidPlayerResults;
+                    }
                 }
 
-                if (isValidScheduleCombination) {
-                    const stats = calculateStats(allRaidSynergies);
-                    if (stats.stdDev < minStdDev) {
-                        minStdDev = stats.stdDev;
-                        finalBestCombination = {
-                            parties: bestSolution,
-                            schedules: partySchedules,
-                            synergies: allRaidSynergies,
-                            stats: stats,
-                            detailedRaidPlayerResults: currentDetailedRaidPlayerResults
+                if (bestCombinationForParties) {
+                    validCompositionsFound++;
+                    if (bestCombinationForParties.stats.stdDev < overallMinStdDev) {
+                        overallMinStdDev = bestCombinationForParties.stats.stdDev;
+                        overallBestCombination = { 
+                            ...bestCombinationForParties, 
+                            parties: currentParties,
+                            detailedRaidPlayerResults: bestDetailedRaidPlayerResults
                         };
                     }
                 }
             }
 
-            if (finalBestCombination) {
-                displayResults(finalBestCombination, players);
+            if (overallBestCombination) {
+                displayResults(overallBestCombination, players); 
                 document.getElementById('status').className = 'status-success';
-                document.getElementById('status').textContent = `최적 조합 생성 완료! (알고리즘: SA + Hill Climbing, SA반복: ${saAttempts}, HC개선: ${hcImprovements}회)`;
+                document.getElementById('status').textContent = `최적 조합 생성 완료! (탐색 시도: ${attempts}회, 유효 파티 조합: ${validCompositionsFound}개)`;
             } else {
-                throw new Error(`${numParties * 4}인 조합을 찾는 데 실패했습니다. 데이터 확인 또는 조건을 완화해보세요.`);
+                throw new Error(`${numParties * 4}인 조합을 찾는 데 실패했습니다. 데이터 확인 또는 조건을 완화해보세요 (동일 모험단 인원이 많거나, 업둥버퍼 제한이 너무 엄격할 수 있습니다).`);
             }
         }
         
