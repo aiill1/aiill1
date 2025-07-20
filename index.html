@@ -999,7 +999,7 @@
             // 4. Final calculation with the best found solution for accurate display
             let finalBestCombination = null;
             let minStdDev = Infinity;
-            const finalScheduleSearchIterations = 4000; 
+            const finalScheduleSearchIterations = 5000; 
 
             for (let j = 0; j < finalScheduleSearchIterations; j++) {
                 const partySchedules = bestSolution.map(() => generateRandomLatinSquare(4));
