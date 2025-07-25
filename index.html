@@ -1447,8 +1447,9 @@
                 // For player rows, movement is restricted within the party
                 moveUpBtn.disabled = !prev || !prev.classList.contains('player-row');
                 moveDownBtn.disabled = !next || !next.classList.contains('player-row');
-            } else { // For party groups (tbody)
-                moveUpBtn.disabled = !prev;
+            } else if (selectedElement.classList.contains('party-group')) { // For party groups (tbody)
+                // BUG FIX: Disable 'Up' button if the previous element is not a party group (i.e., it's the table header).
+                moveUpBtn.disabled = !prev || !prev.classList.contains('party-group');
                 moveDownBtn.disabled = !next;
             }
         }
