@@ -454,6 +454,22 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* --- Spinner Style --- */
+        .spinner {
+            border: 6px solid var(--bg-color);
+            border-top: 6px solid var(--primary-color);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 40px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -468,7 +484,6 @@
                  </label>
              </div>
             <h1>공격대 파티 최적화 도구</h1>
-            <p>인원수에 맞는 모드를 선택하고, 데이터를 기반으로 최적의 조합을 찾아냅니다.</p>
         </header>
 
         <div class="content-wrapper">
@@ -538,12 +553,20 @@
             </div>
 
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2>생성 결과</h2>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <h2>
+                        <span>생성 결과</span>
+                        <span class="tooltip-wrapper">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text" style="width: 320px; margin-left: -168px;">
+                                파티원 혹은 파티를 클릭하여 위아래 순서를 바꿀 수 있습니다.<br>
+                                (단순 정리용이며, 조합이 변경되지는 않습니다.)
+                            </span>
+                        </span>
+                    </h2>
                     <button id="copyButton" onclick="copyResultsToClipboard()" style="width: auto; padding: 8px 16px; font-size: 14px; margin-top: 0; display: none;">클립보드에 복사</button>
                 </div>
                 <div id="resultOutput">
-                    <p>결과가 여기에 표시됩니다.</p>
                 </div>
                  <!-- Ordering Controls -->
                 <div id="ordering-controls" class="hidden">
@@ -833,7 +856,7 @@
 
             statusDiv.className = 'status-info';
             statusDiv.textContent = '최적 조합을 탐색 중입니다... (시간이 다소 소요될 수 있습니다)';
-            resultDiv.innerHTML = '<p>여러 조합을 비교하며 최상의 결과를 찾고 있습니다...</p>';
+            resultDiv.innerHTML = '<div class="spinner"></div>';
 
             const updoongieCap = parseInt(document.getElementById('updoongieCap').value, 10);
             const updoongieThreshold = parseInt(document.getElementById('updoongieThreshold').value, 10);
@@ -870,7 +893,7 @@
                 } catch (e) {
                     statusDiv.className = 'status-error';
                     statusDiv.textContent = `오류: ${e.message}`;
-                    resultDiv.innerHTML = `<p>오류가 발생했습니다. 입력 데이터를 확인해주세요.</p>`;
+                    resultDiv.innerHTML = '';
                 }
             }, 100);
         }
@@ -1521,6 +1544,3 @@
     </script>
 </body>
 </html>
-
-
-
