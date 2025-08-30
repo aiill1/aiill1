@@ -526,7 +526,7 @@
                     <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
                         <span class="tooltip-icon">?</span>
                         <span class="tooltip-text" style="width: 320px; margin-left: -160px;">
-                            파티원을 고정된 순서대로 고정하여 조합합니다.<br>(벞1234, 딜4321)<br>경우의 수가 줄어들기에, 표준편차가 높아질 수 있습니다.
+                            파티 내 플레이어 순서(1~4번)에 따라 고정된 역할 스케줄을 배정하여 조합합니다. 정확도가 다소 낮아질 수 있습니다.
                         </span>
                     </span>
                 </div>
@@ -534,13 +534,7 @@
                 <!-- 업둥버퍼 (Updoong Buffer) Feature Toggle -->
                 <div class="input-group" style="margin-top: 15px;">
                     <input type="checkbox" id="useUpdoongBuffer" checked>
-                    <label for="useUpdoongBuffer">업둥버퍼 변환 사용</label>
-                    <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
-                        <span class="tooltip-icon">?</span>
-                        <span class="tooltip-text" style="width: 320px; margin-left: -160px;">
-                            파티에 업둥버퍼가 있을 경우 체크해주세요.
-                        </span>
-                    </span>
+                    <label for="useUpdoongBuffer">업둥버퍼 사용</label>
                 </div>
 
                 <!-- Container for Updoong Buffer options -->
@@ -876,6 +870,28 @@
             };
         }
 
+        /**
+         * 배열에서 k개의 원소를 뽑는 모든 조합을 반환하는 헬퍼 함수
+         * @param {Array} array - 원본 배열
+         * @param {number} size - 뽑을 원소의 개수
+         * @returns {Array<Array>} 모든 조합의 배열
+         */
+        function getCombinations(array, size) {
+            const results = [];
+            function combine(startIndex, combination) {
+                if (combination.length === size) {
+                    results.push([...combination]);
+                    return;
+                }
+                for (let i = startIndex; i < array.length; i++) {
+                    combination.push(array[i]);
+                    combine(i + 1, combination);
+                    combination.pop();
+                }
+            }
+            combine(0, []);
+            return results;
+        }
 
         // --- Core Logic ---
         function generateTeams() {
@@ -883,10 +899,8 @@
             const resultDiv = document.getElementById('resultOutput');
             const mode = document.querySelector('input[name="mode"]:checked').value;
             
-            // Hide copy button and ordering controls on new generation
             document.getElementById('copyButton').style.display = 'none';
             document.getElementById('ordering-controls').classList.add('hidden');
-
 
             statusDiv.className = 'status-info';
             statusDiv.textContent = '최적 조합을 탐색 중입니다... (시간이 다소 소요될 수 있습니다)';
@@ -899,44 +913,31 @@
             const updoongieThreshold = parseInt(document.getElementById('updoongieThreshold').value, 10);
             const useUpdoongieRatio = document.getElementById('useRatioValue').checked;
             const updoongieBufferMultiplier = parseFloat(document.getElementById('updoongieBufferMultiplier').value);
-
+            
+            // Validate inputs
             if (useUpdoongBuffer) {
-                if (isNaN(updoongieCap) && !useUpdoongieRatio) {
+                if ((!useUpdoongieRatio && isNaN(updoongieCap)) || isNaN(updoongieThreshold) || (useUpdoongieRatio && isNaN(updoongieBufferMultiplier))) {
                     statusDiv.className = 'status-error';
-                    statusDiv.textContent = '오류: 치환값은 숫자여야 합니다.';
-                    return;
-                }
-                if (isNaN(updoongieThreshold)) {
-                    statusDiv.className = 'status-error';
-                    statusDiv.textContent = '오류: 업둥버퍼 인식값이 숫자여야 합니다.';
-                    return;
-                }
-                if (isNaN(updoongieBufferMultiplier) && useUpdoongieRatio) {
-                    statusDiv.className = 'status-error';
-                    statusDiv.textContent = '오류: 업둥버퍼 버프력 곱하기 비율이 숫자여야 합니다.';
+                    statusDiv.textContent = '오류: 업둥버퍼 관련 입력값이 올바른 숫자인지 확인해주세요.';
+                    resultDiv.innerHTML = '';
                     return;
                 }
             }
 
-
             setTimeout(() => {
                 try {
                     const excelData = document.getElementById('excelData').value;
+                    const numPlayers = parseInt(mode, 10);
+                    const players = parseData(excelData, numPlayers);
                     const options = {
-                        updoongieCap,
-                        updoongieThreshold,
-                        useUpdoongieRatio,
-                        updoongieBufferMultiplier,
-                        useUpdoongBuffer,
-                        standardParty
+                        updoongieCap, updoongieThreshold, useUpdoongieRatio,
+                        updoongieBufferMultiplier, useUpdoongBuffer, standardParty
                     };
                     
-                    if (mode === '12') {
-                        generate12PlayerTeams(excelData, options);
-                    } else if (mode === '8') {
-                        generate8PlayerTeams(excelData, options);
-                    } else {
-                        generate4PlayerTeam(excelData, options);
+                    if (numPlayers === 4) {
+                        generate4PlayerTeam(players, options);
+                    } else { // 8 or 12 players
+                        runCombinationFinder(players, numPlayers / 4, options);
                     }
                 } catch (e) {
                     statusDiv.className = 'status-error';
@@ -947,48 +948,100 @@
         }
 
         /**
-         * NEW: Hybrid (Simulated Annealing + Hill Climbing) combination finder
-         * Finds a near-optimal party composition by first exploring globally (SA)
-         * and then fine-tuning locally (HC).
+         * '국룰 조합'을 위한 최적의 파티 구성을 전체 탐색으로 찾는 함수
          */
-        function runCombinationFinder(players, numParties, options) {
-            const { updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier, useUpdoongBuffer, standardParty } = options;
+        function findBestStandardPartyExhaustively(players, numParties, options) {
+            const { updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier, useUpdoongBuffer } = options;
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
-            
-            // '국룰 조합'을 위한 고정 스케줄 정의 (사용자 요청에 따라 특정 스케줄로 고정)
             const fixedStandardSchedule = [
-                [3, 1, 2, 0], // 1공대: 버퍼, 업둥이1, 업둥이2, 딜러
-                [1, 3, 0, 2], // 2공대: 업둥이1, 버퍼, 딜러, 업둥이2
-                [2, 0, 3, 1], // 3공대: 업둥이2, 딜러, 버퍼, 업둥이1
-                [0, 2, 1, 3]  // 4공대: 딜러, 업둥이2, 업둥이1, 버퍼
+                [3, 1, 2, 0], [1, 3, 0, 2], [2, 0, 3, 1], [0, 2, 1, 3]
             ];
 
-            // --- Optimization Algorithm ---
+            let bestCombination = null;
+            let maxMinSynergy = -Infinity;
+            let checkedPartitions = 0;
 
-            // 1. Cost function: Calculate the "energy" (std deviation) of a given party composition.
-            function calculateCompositionEnergy(parties, iterations) {
-                 if (standardParty) {
-                    const allRaidSynergies = [];
-                    let isValid = true;
-                    for (let partyIndex = 0; partyIndex < numParties; partyIndex++) {
-                        for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
-                            const synergyResult = calculatePartySynergy(
-                                parties[partyIndex], fixedStandardSchedule[raidIndex], charRoles,
-                                updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer
-                            );
-                            if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) {
-                                isValid = false; break;
-                            }
-                            allRaidSynergies.push(synergyResult.synergy);
-                        }
-                        if (!isValid) break;
-                    }
-                    if (!isValid) return 999999999;
-                    return calculateStats(allRaidSynergies).stdDev;
+            const allPartitions = [];
+            function generatePartitions(playersToPartition, currentPartitions) {
+                if (playersToPartition.length === 0) {
+                    allPartitions.push(currentPartitions);
+                    return;
                 }
+                const fixedPlayer = playersToPartition[0];
+                const remainingPlayers = playersToPartition.slice(1);
+                const groupCandidates = getCombinations(remainingPlayers, 3);
+                for (const group of groupCandidates) {
+                    const newParty = [fixedPlayer, ...group];
+                    const nextPlayersToPartition = remainingPlayers.filter(p => !group.includes(p));
+                    generatePartitions(nextPlayersToPartition, [...currentPartitions, newParty]);
+                }
+            }
+            generatePartitions(players, []);
+
+            for (const parties of allPartitions) {
+                if (!parties.every(party => new Set(party.map(p => p.guild)).size === 4)) continue;
                 
-                let minStdDevForParties = Infinity;
-                
+                checkedPartitions++;
+                const allRaidSynergies = [];
+                const currentDetailedRaidPlayerResults = [];
+                let isValidCombination = true;
+
+                for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
+                    for (let partyIndex = 0; partyIndex < numParties; partyIndex++) {
+                        const synergyResult = calculatePartySynergy(
+                            parties[partyIndex], fixedStandardSchedule[raidIndex], charRoles,
+                            updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer
+                        );
+                        if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) {
+                            isValidCombination = false; break;
+                        }
+                        allRaidSynergies.push(synergyResult.synergy);
+                        currentDetailedRaidPlayerResults.push(synergyResult.processedPlayers);
+                    }
+                    if (!isValidCombination) break;
+                }
+
+                if (isValidCombination) {
+                    const minSynergy = Math.min(...allRaidSynergies);
+                    if (minSynergy > maxMinSynergy) {
+                        maxMinSynergy = minSynergy;
+                        const stats = calculateStats(allRaidSynergies);
+                        const maxSynergy = Math.max(...allRaidSynergies);
+                        bestCombination = {
+                            parties,
+                            schedules: Array(numParties).fill(fixedStandardSchedule),
+                            synergies: allRaidSynergies,
+                            stats: { ...stats, min: minSynergy, max: maxSynergy },
+                            detailedRaidPlayerResults: currentDetailedRaidPlayerResults
+                        };
+                    }
+                }
+            }
+
+            if (bestCombination) {
+                displayResults(bestCombination, players);
+                document.getElementById('status').className = 'status-success';
+                document.getElementById('status').textContent = `'국룰 조합' 전체 탐색 완료! (총 ${checkedPartitions.toLocaleString()}개 조합 확인)`;
+            } else {
+                throw new Error(`'국룰 조합'을 찾는 데 실패했습니다. 동일 모험단 인원이 너무 많거나 다른 조건을 확인해주세요.`);
+            }
+        }
+
+        /**
+         * 8인 또는 12인 조합을 찾는 메인 함수 (표준/일반 조합 라우팅)
+         */
+        function runCombinationFinder(players, numParties, options) {
+            // '국룰 조합' 옵션이 켜져 있으면, 전체 탐색 알고리즘을 사용
+            if (options.standardParty) {
+                return findBestStandardPartyExhaustively(players, numParties, options);
+            }
+
+            // --- 일반 조합 (Heuristic: SA + Hill Climbing) ---
+            const { updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier, useUpdoongBuffer } = options;
+            const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
+
+            function calculateCompositionEnergy(parties, iterations) {
+                let highestMinSynergyFound = -Infinity;
                 for (let j = 0; j < iterations; j++) {
                     const partySchedules = parties.map(() => generateRandomLatinSquare(4));
                     const allRaidSynergies = [];
@@ -1000,10 +1053,8 @@
                                 parties[partyIndex], partySchedules[partyIndex][raidIndex], charRoles,
                                 updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer
                             );
-
                             if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) {
-                                isValidScheduleCombination = false;
-                                break;
+                                isValidScheduleCombination = false; break;
                             }
                             allRaidSynergies.push(synergyResult.synergy);
                         }
@@ -1011,16 +1062,15 @@
                     }
 
                     if (isValidScheduleCombination) {
-                        const stats = calculateStats(allRaidSynergies);
-                        if (stats.stdDev < minStdDevForParties) {
-                            minStdDevForParties = stats.stdDev;
+                        const currentMinSynergy = Math.min(...allRaidSynergies);
+                        if (currentMinSynergy > highestMinSynergyFound) {
+                            highestMinSynergyFound = currentMinSynergy;
                         }
                     }
                 }
-                return minStdDevForParties === Infinity ? 999999999 : minStdDevForParties;
+                return highestMinSynergyFound === -Infinity ? Infinity : -highestMinSynergyFound;
             }
 
-            // 2. Function to create a "neighbor" solution by swapping two players.
             function createNeighbor(parties) {
                 const newParties = JSON.parse(JSON.stringify(parties));
                 if (numParties < 2) return newParties;
@@ -1032,12 +1082,10 @@
                 return newParties;
             }
             
-            // Function to check if a composition is valid (no guild dupes).
             function isCompositionValid(parties) {
                 return parties.every(party => new Set(party.map(p => p.guild)).size === party.length);
             }
 
-            // 3. Find a valid initial random solution
             let currentSolution;
             for (let i = 0; i < 5000; i++) {
                 const shuffledPlayers = shuffle([...players]);
@@ -1049,9 +1097,9 @@
                 if (i === 4999) throw new Error(`유효한 초기 파티 조합을 찾을 수 없습니다. 동일 모험단 소속 인원이 너무 많지 않은지 확인해주세요.`);
             }
 
-            // --- Phase 1: Simulated Annealing (Global Search) ---
+            // --- Phase 1: Simulated Annealing ---
             let bestSolution = JSON.parse(JSON.stringify(currentSolution));
-            const scheduleIterationsSA = standardParty ? 1 : 800; // Fewer iterations for speed during SA, 1 for standard
+            const scheduleIterationsSA = 800;
             let currentEnergy = calculateCompositionEnergy(currentSolution, scheduleIterationsSA);
             let bestEnergy = currentEnergy;
 
@@ -1062,7 +1110,7 @@
             while (temp > 1.0) {
                 saAttempts++;
                 let newSolution;
-                for (let i = 0; i < 100; i++) { // Try to find a valid neighbor
+                for (let i = 0; i < 100; i++) {
                     newSolution = createNeighbor(currentSolution);
                     if (isCompositionValid(newSolution)) break;
                     newSolution = null;
@@ -1081,11 +1129,11 @@
                 temp *= coolingRate;
             }
 
-            // --- Phase 2: Hill Climbing (Local Search) ---
+            // --- Phase 2: Hill Climbing ---
             let hcImprovements = 0;
-            for (let i = 0; i < 500; i++) { // Attempt to find a better neighbor 500 times in a row
+            for (let i = 0; i < 1000; i++) {
                 let neighborSolution;
-                 for (let j = 0; j < 100; j++) { // Try to find a valid neighbor
+                 for (let j = 0; j < 100; j++) {
                     neighborSolution = createNeighbor(bestSolution);
                     if (isCompositionValid(neighborSolution)) break;
                     neighborSolution = null;
@@ -1097,20 +1145,17 @@
                     bestSolution = neighborSolution;
                     bestEnergy = neighborEnergy;
                     hcImprovements++;
-                    i = 0; // Reset counter on improvement
+                    i = 0;
                 }
             }
             
-            // 4. Final calculation with the best found solution for accurate display
+            // --- Final Calculation ---
             let finalBestCombination = null;
-            let minStdDev = Infinity;
-            const finalScheduleSearchIterations = standardParty ? 1 : 5000; 
+            let maxMinSynergy = -Infinity;
+            const finalScheduleSearchIterations = 8000;
 
             for (let j = 0; j < finalScheduleSearchIterations; j++) {
-                const partySchedules = standardParty
-                    ? bestSolution.map(() => fixedStandardSchedule)
-                    : bestSolution.map(() => generateRandomLatinSquare(4));
-                
+                const partySchedules = bestSolution.map(() => generateRandomLatinSquare(4));
                 const allRaidSynergies = [];
                 const currentDetailedRaidPlayerResults = [];
                 let isValidScheduleCombination = true;
@@ -1123,8 +1168,7 @@
                         );
 
                         if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) {
-                            isValidScheduleCombination = false;
-                            break;
+                            isValidScheduleCombination = false; break;
                         }
                         allRaidSynergies.push(synergyResult.synergy);
                         currentDetailedRaidPlayerResults.push(synergyResult.processedPlayers);
@@ -1133,14 +1177,16 @@
                 }
 
                 if (isValidScheduleCombination) {
-                    const stats = calculateStats(allRaidSynergies);
-                    if (stats.stdDev < minStdDev) {
-                        minStdDev = stats.stdDev;
+                    const minSynergy = Math.min(...allRaidSynergies);
+                    if (minSynergy > maxMinSynergy) {
+                        maxMinSynergy = minSynergy;
+                        const stats = calculateStats(allRaidSynergies);
+                        const maxSynergy = Math.max(...allRaidSynergies);
                         finalBestCombination = {
                             parties: bestSolution,
                             schedules: partySchedules,
                             synergies: allRaidSynergies,
-                            stats: stats,
+                            stats: { ...stats, min: minSynergy, max: maxSynergy },
                             detailedRaidPlayerResults: currentDetailedRaidPlayerResults
                         };
                     }
@@ -1156,19 +1202,8 @@
             }
         }
         
-        function generate12PlayerTeams(excelData, options) {
-            const players = parseData(excelData, 12);
-            runCombinationFinder(players, 3, options);
-        }
-
-        function generate8PlayerTeams(excelData, options) {
-            const players = parseData(excelData, 8);
-            runCombinationFinder(players, 2, options);
-        }
-        
-        function generate4PlayerTeam(excelData, options) {
+        function generate4PlayerTeam(players, options) {
             const { updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier, useUpdoongBuffer, standardParty } = options;
-            const players = parseData(excelData, 4);
             
             const guilds = new Set(players.map(p => p.guild));
             if (guilds.size < players.length) {
@@ -1176,18 +1211,12 @@
             }
 
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
-            
-            // '국룰 조합'을 위한 고정 스케줄 정의 (사용자 요청에 따라 특정 스케줄로 고정)
             const fixedStandardSchedule = [
-                [3, 1, 2, 0], // 1공대: 버퍼, 업둥이1, 업둥이2, 딜러
-                [1, 3, 0, 2], // 2공대: 업둥이1, 버퍼, 딜러, 업둥이2
-                [2, 0, 3, 1], // 3공대: 업둥이2, 딜러, 버퍼, 업둥이1
-                [0, 2, 1, 3]  // 4공대: 딜러, 업둥이2, 업둥이1, 버퍼
+                [3, 1, 2, 0], [1, 3, 0, 2], [2, 0, 3, 1], [0, 2, 1, 3]
             ];
             
             let bestCombination = null;
-            let minStdDev = Infinity;
-            
+            let maxMinSynergy = -Infinity;
             const scheduleSearchIterations = standardParty ? 1 : 20000;
 
             for (let i = 0; i < scheduleSearchIterations; i++) {
@@ -1202,28 +1231,26 @@
                         updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer
                     );
                     
-                    const modifiedPlayersInRaidParty = synergyResult.processedPlayers.filter(p => p.isModified).length;
-                    if (modifiedPlayersInRaidParty > 1) {
-                        isValidSchedule = false;
-                        break;
+                    if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) {
+                        isValidSchedule = false; break;
                     }
 
                     raidSynergies.push(synergyResult.synergy);
                     raidDetailedPlayerResults.push(synergyResult.processedPlayers);
                 }
                 
-                if (!isValidSchedule) {
-                    continue;
-                }
+                if (!isValidSchedule) continue;
 
-                const stats = calculateStats(raidSynergies);
-                if (standardParty || stats.stdDev < minStdDev) {
-                    minStdDev = stats.stdDev;
+                const minSynergy = Math.min(...raidSynergies);
+                if (minSynergy > maxMinSynergy) {
+                    maxMinSynergy = minSynergy;
+                    const stats = calculateStats(raidSynergies);
+                    const maxSynergy = Math.max(...raidSynergies);
                     bestCombination = { 
                         parties: [players],
                         schedules: [schedule], 
                         synergies: raidSynergies, 
-                        stats: stats,
+                        stats: { ...stats, min: minSynergy, max: maxSynergy },
                         detailedRaidPlayerResults: raidDetailedPlayerResults
                     };
                 }
@@ -1280,8 +1307,9 @@
 
             let tableHtml = `
                 <div class="result-summary">
-                    <strong>파티 평균 딜*버프력:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
-                    <strong>표준편차:</strong> ${stats.stdDev.toFixed(2)}
+                    <strong>딜*버프력 분포 &nbsp; | &nbsp; 최저:</strong> ${stats.min.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
+                    <strong>평균:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
+                    <strong>최고:</strong> ${stats.max.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}
                 </div>
                 <table>
                     <thead>
@@ -1629,4 +1657,3 @@
     </script>
 </body>
 </html>
-
