@@ -526,7 +526,7 @@
                     <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
                         <span class="tooltip-icon">?</span>
                         <span class="tooltip-text" style="width: 320px; margin-left: -160px;">
-                            파티 내 플레이어 순서(1~4번)에 따라 고정된 역할 스케줄을 배정하여 조합합니다. 편차가 높아질 수 있습니다.
+                            파티 내 플레이어 순서(1~4번)에 따라 고정된 역할 스케줄을 배정하여 조합합니다. 정확도가 다소 낮아질 수 있습니다.
                         </span>
                     </span>
                 </div>
@@ -1021,9 +1021,9 @@
             if (bestCombination) {
                 displayResults(bestCombination, players);
                 document.getElementById('status').className = 'status-success';
-                document.getElementById('status').textContent = 전체 조합 탐색 완료! (총 ${checkedPartitions.toLocaleString()}개 조합 확인)`;
+                document.getElementById('status').textContent = `'국룰 조합' 전체 탐색 완료! (총 ${checkedPartitions.toLocaleString()}개 조합 확인)`;
             } else {
-                throw new Error(`'조합'을 찾는 데 실패했습니다. 동일 모험단 인원이 너무 많거나 다른 조건을 확인해주세요.`);
+                throw new Error(`'국룰 조합'을 찾는 데 실패했습니다. 동일 모험단 인원이 너무 많거나 다른 조건을 확인해주세요.`);
             }
         }
 
@@ -1196,7 +1196,7 @@
             if (finalBestCombination) {
                 displayResults(finalBestCombination, players);
                 document.getElementById('status').className = 'status-success';
-                document.getElementById('status').textContent = `조합 생성 완료! (SA반복: ${saAttempts}, HC개선: ${hcImprovements}회)`;
+                document.getElementById('status').textContent = `최적 조합 생성 완료! (알고리즘: SA + Hill Climbing, SA반복: ${saAttempts}, HC개선: ${hcImprovements}회)`;
             } else {
                 throw new Error(`${numParties * 4}인 조합을 찾는 데 실패했습니다. 데이터 확인 또는 조건을 완화해보세요.`);
             }
@@ -1710,4 +1710,3 @@
     </script>
 </body>
 </html>
-
