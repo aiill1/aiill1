@@ -1477,13 +1477,14 @@
                 });
             });
 
+            // --- Settings Persistence ---
+
+            // 1. Dark Mode
             const darkModeToggle = document.getElementById('darkModeToggle');
-            
             if (localStorage.getItem('theme') === 'dark') {
                 document.body.classList.add('dark-mode');
                 darkModeToggle.checked = true;
             }
-
             darkModeToggle.addEventListener('change', () => {
                 if (darkModeToggle.checked) {
                     document.body.classList.add('dark-mode');
@@ -1494,31 +1495,83 @@
                 }
             });
 
+            // 2. '국룰 파티 조합' (Standard Party)
+            const standardPartyCheckbox = document.getElementById('standardParty');
+            const savedStandardParty = localStorage.getItem('standardPartyEnabled');
+            if (savedStandardParty !== null) {
+                standardPartyCheckbox.checked = JSON.parse(savedStandardParty);
+            }
+            standardPartyCheckbox.addEventListener('change', () => {
+                localStorage.setItem('standardPartyEnabled', standardPartyCheckbox.checked);
+            });
+
+            // 3. '업둥버퍼 사용' (Use Updoong Buffer)
+            const useUpdoongBufferCheckbox = document.getElementById('useUpdoongBuffer');
+            const updoongBufferOptionsContainer = document.getElementById('updoongBufferOptions');
+            const savedUpdoongBuffer = localStorage.getItem('useUpdoongBufferEnabled');
+
+            if (savedUpdoongBuffer !== null) {
+                useUpdoongBufferCheckbox.checked = JSON.parse(savedUpdoongBuffer);
+            }
+            
+            updoongBufferOptionsContainer.classList.toggle('hidden', !useUpdoongBufferCheckbox.checked);
+            
+            useUpdoongBufferCheckbox.addEventListener('change', () => {
+                updoongBufferOptionsContainer.classList.toggle('hidden', !useUpdoongBufferCheckbox.checked);
+                localStorage.setItem('useUpdoongBufferEnabled', useUpdoongBufferCheckbox.checked);
+            });
+
+            // 4. Updoong Buffer Detailed Options
+            const updoongieThresholdInput = document.getElementById('updoongieThreshold');
             const useFixedValueRadio = document.getElementById('useFixedValue');
             const useRatioValueRadio = document.getElementById('useRatioValue');
+            const updoongieCapInput = document.getElementById('updoongieCap');
+            const updoongieMultiplierInput = document.getElementById('updoongieBufferMultiplier');
             const updoongieCapInputContainer = document.getElementById('updoongieCapInputContainer');
             const updoongieMultiplierInputContainer = document.getElementById('updoongieMultiplierInputContainer');
+
+            // Load saved values
+            const savedThreshold = localStorage.getItem('updoongieThreshold');
+            if (savedThreshold !== null) updoongieThresholdInput.value = savedThreshold;
+
+            const savedCap = localStorage.getItem('updoongieCap');
+            if (savedCap !== null) updoongieCapInput.value = savedCap;
+
+            const savedMultiplier = localStorage.getItem('updoongieBufferMultiplier');
+            if (savedMultiplier !== null) updoongieMultiplierInput.value = savedMultiplier;
+            
+            const savedMethod = localStorage.getItem('conversionMethod');
+            if (savedMethod === 'ratio') {
+                useRatioValueRadio.checked = true;
+            } else {
+                useFixedValueRadio.checked = true; // Default
+            }
 
             function toggleUpdoongieInputs() {
                 if (useFixedValueRadio.checked) {
                     updoongieCapInputContainer.classList.remove('hidden');
                     updoongieMultiplierInputContainer.classList.add('hidden');
-                } else if (useRatioValueRadio.checked) {
+                } else { // Ratio is checked
                     updoongieCapInputContainer.classList.add('hidden');
                     updoongieMultiplierInputContainer.classList.remove('hidden');
                 }
             }
-            toggleUpdoongieInputs();
-            useFixedValueRadio.addEventListener('change', toggleUpdoongieInputs);
-            useRatioValueRadio.addEventListener('change', toggleUpdoongieInputs);
+            toggleUpdoongieInputs(); // Run on load
 
-            // --- New listener for Updoong Buffer feature toggle ---
-            const useUpdoongBufferCheckbox = document.getElementById('useUpdoongBuffer');
-            const updoongBufferOptionsContainer = document.getElementById('updoongBufferOptions');
-
-            useUpdoongBufferCheckbox.addEventListener('change', () => {
-                updoongBufferOptionsContainer.classList.toggle('hidden', !useUpdoongBufferCheckbox.checked);
+            // Save values on change
+            updoongieThresholdInput.addEventListener('input', () => localStorage.setItem('updoongieThreshold', updoongieThresholdInput.value));
+            updoongieCapInput.addEventListener('input', () => localStorage.setItem('updoongieCap', updoongieCapInput.value));
+            updoongieMultiplierInput.addEventListener('input', () => localStorage.setItem('updoongieBufferMultiplier', updoongieMultiplierInput.value));
+            
+            useFixedValueRadio.addEventListener('change', () => {
+                localStorage.setItem('conversionMethod', 'fixed');
+                toggleUpdoongieInputs();
             });
+            useRatioValueRadio.addEventListener('change', () => {
+                localStorage.setItem('conversionMethod', 'ratio');
+                toggleUpdoongieInputs();
+            });
+
         });
         
         // --- NEW: Ordering Logic ---
