@@ -1021,7 +1021,7 @@
             if (bestCombination) {
                 displayResults(bestCombination, players);
                 document.getElementById('status').className = 'status-success';
-                document.getElementById('status').textContent = `'국룰 조합' 전체 탐색 완료! (총 ${checkedPartitions.toLocaleString()}개 조합 확인)`;
+                document.getElementById('status').textContent = `전체 조합 탐색 완료! (총 ${checkedPartitions.toLocaleString()}개 조합 확인)`;
             } else {
                 throw new Error(`'국룰 조합'을 찾는 데 실패했습니다. 동일 모험단 인원이 너무 많거나 다른 조건을 확인해주세요.`);
             }
@@ -1196,7 +1196,7 @@
             if (finalBestCombination) {
                 displayResults(finalBestCombination, players);
                 document.getElementById('status').className = 'status-success';
-                document.getElementById('status').textContent = `최적 조합 생성 완료! (알고리즘: SA + Hill Climbing, SA반복: ${saAttempts}, HC개선: ${hcImprovements}회)`;
+                document.getElementById('status').textContent = `조합 생성 완료! (SA반복: ${saAttempts}, HC개선: ${hcImprovements}회)`;
             } else {
                 throw new Error(`${numParties * 4}인 조합을 찾는 데 실패했습니다. 데이터 확인 또는 조건을 완화해보세요.`);
             }
@@ -1514,64 +1514,34 @@
                 useUpdoongBufferCheckbox.checked = JSON.parse(savedUpdoongBuffer);
             }
             
+            // Update visibility on load based on checkbox state
             updoongBufferOptionsContainer.classList.toggle('hidden', !useUpdoongBufferCheckbox.checked);
             
+            // Add listener to save state and toggle visibility on change
             useUpdoongBufferCheckbox.addEventListener('change', () => {
                 updoongBufferOptionsContainer.classList.toggle('hidden', !useUpdoongBufferCheckbox.checked);
                 localStorage.setItem('useUpdoongBufferEnabled', useUpdoongBufferCheckbox.checked);
             });
 
-            // 4. Updoong Buffer Detailed Options
-            const updoongieThresholdInput = document.getElementById('updoongieThreshold');
+            // --- End of Persistence Logic ---
+
             const useFixedValueRadio = document.getElementById('useFixedValue');
             const useRatioValueRadio = document.getElementById('useRatioValue');
-            const updoongieCapInput = document.getElementById('updoongieCap');
-            const updoongieMultiplierInput = document.getElementById('updoongieBufferMultiplier');
             const updoongieCapInputContainer = document.getElementById('updoongieCapInputContainer');
             const updoongieMultiplierInputContainer = document.getElementById('updoongieMultiplierInputContainer');
-
-            // Load saved values
-            const savedThreshold = localStorage.getItem('updoongieThreshold');
-            if (savedThreshold !== null) updoongieThresholdInput.value = savedThreshold;
-
-            const savedCap = localStorage.getItem('updoongieCap');
-            if (savedCap !== null) updoongieCapInput.value = savedCap;
-
-            const savedMultiplier = localStorage.getItem('updoongieBufferMultiplier');
-            if (savedMultiplier !== null) updoongieMultiplierInput.value = savedMultiplier;
-            
-            const savedMethod = localStorage.getItem('conversionMethod');
-            if (savedMethod === 'ratio') {
-                useRatioValueRadio.checked = true;
-            } else {
-                useFixedValueRadio.checked = true; // Default
-            }
 
             function toggleUpdoongieInputs() {
                 if (useFixedValueRadio.checked) {
                     updoongieCapInputContainer.classList.remove('hidden');
                     updoongieMultiplierInputContainer.classList.add('hidden');
-                } else { // Ratio is checked
+                } else if (useRatioValueRadio.checked) {
                     updoongieCapInputContainer.classList.add('hidden');
                     updoongieMultiplierInputContainer.classList.remove('hidden');
                 }
             }
-            toggleUpdoongieInputs(); // Run on load
-
-            // Save values on change
-            updoongieThresholdInput.addEventListener('input', () => localStorage.setItem('updoongieThreshold', updoongieThresholdInput.value));
-            updoongieCapInput.addEventListener('input', () => localStorage.setItem('updoongieCap', updoongieCapInput.value));
-            updoongieMultiplierInput.addEventListener('input', () => localStorage.setItem('updoongieBufferMultiplier', updoongieMultiplierInput.value));
-            
-            useFixedValueRadio.addEventListener('change', () => {
-                localStorage.setItem('conversionMethod', 'fixed');
-                toggleUpdoongieInputs();
-            });
-            useRatioValueRadio.addEventListener('change', () => {
-                localStorage.setItem('conversionMethod', 'ratio');
-                toggleUpdoongieInputs();
-            });
-
+            toggleUpdoongieInputs();
+            useFixedValueRadio.addEventListener('change', toggleUpdoongieInputs);
+            useRatioValueRadio.addEventListener('change', toggleUpdoongieInputs);
         });
         
         // --- NEW: Ordering Logic ---
