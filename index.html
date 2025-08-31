@@ -396,6 +396,11 @@
             display: none !important;
         }
 
+        #updoongiePlacementContainer {
+            padding-left: 25px;
+            margin-top: 10px;
+        }
+
         /* --- Styles for Ordering --- */
         #ordering-controls {
             position: absolute;
@@ -526,9 +531,30 @@
                     <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
                         <span class="tooltip-icon">?</span>
                         <span class="tooltip-text" style="width: 320px; margin-left: -160px;">
-                            파티 내 플레이어 순서(1~4번)에 따라 고정된 역할 스케줄을 배정하여 조합합니다. 정확도가 다소 낮아질 수 있습니다.
+                            파티 내 플레이어 순서를 국룰대로 조합합니다.<br>(벞1234,딜4321)파티딜 최저점이 낮아질 수 있습니다.
                         </span>
-                    </span>
+                    </span>	
+                </div>
+
+                <!-- NEW: 업둥이 순서 고정 (Fixed Updoongie Order) Feature -->
+                <div id="fixedUpdoongieOrderContainer" class="hidden">
+                    <div class="input-group" style="margin-top: 10px; margin-bottom: 0;">
+                         <input type="checkbox" id="fixedUpdoongieOrder">
+                         <label for="fixedUpdoongieOrder">업둥이 순서 고정</label>
+                         <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
+                             <span class="tooltip-icon">?</span>
+                             <span class="tooltip-text" style="width: 320px; margin-left: -160px;">
+                                 업둥이의 순서를 고정합니다.<br>정순:쌘 업둥이 먼저 배치 | 역순:약한 업둥이 먼저 배치
+                             </span>
+                         </span>
+                    </div>
+                    <div id="updoongiePlacementContainer" class="mode-selector hidden" style="justify-content: flex-start;">
+                        <input type="radio" id="placement1" name="updoongiePlacement" value="1" checked>
+                        <label for="placement1">정순</label>
+
+                        <input type="radio" id="placement2" name="updoongiePlacement" value="2">
+                        <label for="placement2">역순</label>
+                    </div>
                 </div>
 
                 <!-- 업둥버퍼 (Updoong Buffer) Feature Toggle -->
@@ -790,6 +816,7 @@
         }
         
         /**
+         * BUG FIX: 파티 시너지 계산 로직 수정
          * 단일 파티의 시너지를 계산하고 각 플레이어의 최종/원래 값을 반환하는 함수
          * @param {Array<Object>} partyPlayers - 현재 파티의 4명 플레이어 객체
          * @param {Array<number>} scheduleRow - 현재 레이드에서의 역할 할당 스케줄 (예: [0, 1, 2, 3] -> 딜러, 업둥이1, 업둥이2, 버퍼)
@@ -802,12 +829,9 @@
          * @returns {Object} 시너지 값과 각 플레이어의 역할별 최종/원래 값을 포함하는 객체
          */
         function calculatePartySynergy(partyPlayers, scheduleRow, charRoles, updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer) {
-            let dps_val = 0;
-            let up1_val = 0;
-            let up2_val = 0;
-            let buffer_val = 0;
-
-            const processedPlayers = []; // 각 플레이어의 처리된 값을 저장
+            let totalDps = 0;
+            let bufferPower = 0;
+            const processedPlayers = [];
 
             for (let playerIndex = 0; playerIndex < 4; playerIndex++) {
                 const player = partyPlayers[playerIndex];
@@ -816,40 +840,24 @@
 
                 let displayValue = originalValue;
                 let roleClass = '';
-                let isModified = false; // 값이 치환되었는지 여부를 나타내는 플래그
+                let isModified = false;
 
-                if (role === '딜러') {
-                    dps_val = originalValue;
-                    roleClass = 'role-dps';
-                } else if (role === '업둥이1' || role === '업둥이2') {
-                    roleClass = 'role-updoongie';
+                if (role === '버퍼') {
+                    roleClass = 'role-buffer';
+                    bufferPower = originalValue;
+                    displayValue = originalValue;
+                } else { // '딜러', '업둥이1', '업둥이2'
+                    roleClass = (role === '딜러') ? 'role-dps' : 'role-updoongie';
+                    
+                    let dpsContribution = originalValue;
+                    // Check if this dealer should be treated as an "updoong buffer"
                     if (useUpdoongBuffer && originalValue > updoongieThreshold) {
                         isModified = true;
-                        if (useUpdoongieRatio) {
-                            displayValue = originalValue * updoongieBufferMultiplier;
-                        } else {
-                            displayValue = updoongieCap;
-                        }
-                    } else {
-                        displayValue = originalValue;
+                        dpsContribution = useUpdoongieRatio ? (originalValue * updoongieBufferMultiplier) : updoongieCap;
                     }
-
-                    if (role === '업둥이1') up1_val = displayValue;
-                    else if (role === '업둥이2') up2_val = displayValue;
-
-                } else if (role === '버퍼') {
-                    roleClass = 'role-buffer';
-                    if (useUpdoongBuffer && originalValue < updoongieThreshold) { 
-                        isModified = true;
-                        if (useUpdoongieRatio) {
-                            displayValue = originalValue * updoongieBufferMultiplier;
-                        } else {
-                            displayValue = updoongieCap;
-                        }
-                    } else {
-                        displayValue = originalValue;
-                    }
-                    buffer_val = displayValue;
+                    
+                    totalDps += dpsContribution;
+                    displayValue = dpsContribution;
                 }
 
                 processedPlayers.push({
@@ -862,13 +870,14 @@
                 });
             }
 
-            const partySynergy = (dps_val + up1_val + up2_val) * buffer_val;
+            const partySynergy = totalDps * bufferPower;
 
             return {
                 synergy: partySynergy,
                 processedPlayers: processedPlayers
             };
         }
+
 
         /**
          * 배열에서 k개의 원소를 뽑는 모든 조합을 반환하는 헬퍼 함수
@@ -908,6 +917,9 @@
 
             const useUpdoongBuffer = document.getElementById('useUpdoongBuffer').checked;
             const standardParty = document.getElementById('standardParty').checked;
+            const fixedUpdoongieOrder = document.getElementById('fixedUpdoongieOrder').checked;
+            const updoongiePlacement = document.querySelector('input[name="updoongiePlacement"]:checked').value;
+
 
             const updoongieCap = parseInt(document.getElementById('updoongieCap').value, 10);
             const updoongieThreshold = parseInt(document.getElementById('updoongieThreshold').value, 10);
@@ -931,7 +943,8 @@
                     const players = parseData(excelData, numPlayers);
                     const options = {
                         updoongieCap, updoongieThreshold, useUpdoongieRatio,
-                        updoongieBufferMultiplier, useUpdoongBuffer, standardParty
+                        updoongieBufferMultiplier, useUpdoongBuffer, standardParty,
+                        fixedUpdoongieOrder, updoongiePlacement
                     };
                     
                     if (numPlayers === 4) {
@@ -953,9 +966,34 @@
         function findBestStandardPartyExhaustively(players, numParties, options) {
             const { updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier, useUpdoongBuffer } = options;
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
-            const fixedStandardSchedule = [
+
+            // 국룰 조합 스케줄 정의
+            const originalStandardSchedule = [
                 [3, 1, 2, 0], [1, 3, 0, 2], [2, 0, 3, 1], [0, 2, 1, 3]
             ];
+            // BUG FIX: 사용자의 예시에 맞게 스케줄을 수정합니다. (예: [버퍼, 업둥이1, 업둥이1, 딜러])
+            const placement1Schedule = [
+                [3, 1, 1, 0], // 1공대: 버퍼, 업1, 업1, 딜
+                [1, 3, 0, 1], // 2공대: 업1, 버퍼, 딜, 업1
+                [2, 0, 3, 2], // 3공대: 업2, 딜, 버퍼, 업2
+                [0, 2, 2, 3]  // 4공대: 딜, 업2, 업2, 버퍼
+            ];
+            const placement2Schedule = [
+                [3, 2, 2, 0], // 1공대: 버퍼, 업2, 업2, 딜
+                [2, 3, 0, 2], // 2공대: 업2, 버퍼, 딜, 업2
+                [1, 0, 3, 1], // 3공대: 업1, 딜, 버퍼, 업1
+                [0, 1, 1, 3]  // 4공대: 딜, 업1, 업1, 버퍼
+            ];
+
+            let activeSchedule = originalStandardSchedule;
+            if (options.fixedUpdoongieOrder) {
+                if (options.updoongiePlacement === '1') {
+                    activeSchedule = placement1Schedule;
+                } else if (options.updoongiePlacement === '2') {
+                    activeSchedule = placement2Schedule;
+                }
+            }
+
 
             let bestCombination = null;
             let maxMinSynergy = -Infinity;
@@ -989,7 +1027,7 @@
                 for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                     for (let partyIndex = 0; partyIndex < numParties; partyIndex++) {
                         const synergyResult = calculatePartySynergy(
-                            parties[partyIndex], fixedStandardSchedule[raidIndex], charRoles,
+                            parties[partyIndex], activeSchedule[raidIndex], charRoles,
                             updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer
                         );
                         if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) {
@@ -1009,10 +1047,11 @@
                         const maxSynergy = Math.max(...allRaidSynergies);
                         bestCombination = {
                             parties,
-                            schedules: Array(numParties).fill(fixedStandardSchedule),
+                            schedules: Array(numParties).fill(activeSchedule),
                             synergies: allRaidSynergies,
                             stats: { ...stats, min: minSynergy, max: maxSynergy },
-                            detailedRaidPlayerResults: currentDetailedRaidPlayerResults
+                            detailedRaidPlayerResults: currentDetailedRaidPlayerResults,
+                            options: options // 옵션 저장
                         };
                     }
                 }
@@ -1187,18 +1226,18 @@
                             schedules: partySchedules,
                             synergies: allRaidSynergies,
                             stats: { ...stats, min: minSynergy, max: maxSynergy },
-                            detailedRaidPlayerResults: currentDetailedRaidPlayerResults
+                            detailedRaidPlayerResults: currentDetailedRaidPlayerResults,
+                            options: options // 옵션 저장
                         };
                     }
                 }
             }
-
             if (finalBestCombination) {
                 displayResults(finalBestCombination, players);
                 document.getElementById('status').className = 'status-success';
-                document.getElementById('status').textContent = `조합 생성 완료! (SA반복: ${saAttempts}, HC개선: ${hcImprovements}회)`;
+                document.getElementById('status').textContent = `최적 조합 생성 완료! (SA 시도: ${saAttempts.toLocaleString()}, HC 개선: ${hcImprovements.toLocaleString()})`;
             } else {
-                throw new Error(`${numParties * 4}인 조합을 찾는 데 실패했습니다. 데이터 확인 또는 조건을 완화해보세요.`);
+                throw new Error('최적 조합을 찾는 데 실패했습니다. 데이터 확인 또는 조건을 완화해보세요.');
             }
         }
         
@@ -1211,16 +1250,39 @@
             }
 
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
-            const fixedStandardSchedule = [
+            // 국룰 조합 스케줄 정의
+            const originalStandardSchedule = [
                 [3, 1, 2, 0], [1, 3, 0, 2], [2, 0, 3, 1], [0, 2, 1, 3]
             ];
+            // BUG FIX: 사용자의 예시에 맞게 스케줄을 수정합니다. (예: [버퍼, 업둥이1, 업둥이1, 딜러])
+            const placement1Schedule = [
+                [3, 1, 1, 0], // 1공대
+                [1, 3, 0, 1], // 2공대
+                [2, 0, 3, 2], // 3공대
+                [0, 2, 2, 3]  // 4공대
+            ];
+            const placement2Schedule = [
+                [3, 2, 2, 0], // 1공대
+                [2, 3, 0, 2], // 2공대
+                [1, 0, 3, 1], // 3공대
+                [0, 1, 1, 3]  // 4공대
+            ];
+            
+            let activeSchedule = originalStandardSchedule;
+             if (standardParty && options.fixedUpdoongieOrder) {
+                if (options.updoongiePlacement === '1') {
+                    activeSchedule = placement1Schedule;
+                } else if (options.updoongiePlacement === '2') {
+                    activeSchedule = placement2Schedule;
+                }
+            }
             
             let bestCombination = null;
             let maxMinSynergy = -Infinity;
             const scheduleSearchIterations = standardParty ? 1 : 20000;
 
             for (let i = 0; i < scheduleSearchIterations; i++) {
-                const schedule = standardParty ? fixedStandardSchedule : generateRandomLatinSquare(4);
+                const schedule = standardParty ? activeSchedule : generateRandomLatinSquare(4);
                 const raidSynergies = [];
                 const raidDetailedPlayerResults = [];
                 let isValidSchedule = true;
@@ -1251,7 +1313,8 @@
                         schedules: [schedule], 
                         synergies: raidSynergies, 
                         stats: { ...stats, min: minSynergy, max: maxSynergy },
-                        detailedRaidPlayerResults: raidDetailedPlayerResults
+                        detailedRaidPlayerResults: raidDetailedPlayerResults,
+                        options: options // 옵션 저장
                     };
                 }
             }
@@ -1273,7 +1336,7 @@
          */
         function displayResults(combination, allPlayers) {
             const resultDiv = document.getElementById('resultOutput');
-            const { parties, stats, synergies, detailedRaidPlayerResults } = combination;
+            const { parties, stats, synergies, detailedRaidPlayerResults, options } = combination;
             const numParties = parties.length;
 
             const resultsGrid = {}; 
@@ -1305,9 +1368,15 @@
                 });
             });
 
+            let placementLabel = '';
+            if (options.standardParty && options.fixedUpdoongieOrder) {
+                const placementText = options.updoongiePlacement === '1' ? '정순' : '역순';
+                placementLabel = `<strong>순서: <span style="color: var(--primary-color);">${placementText}</span></strong> &nbsp; | &nbsp; `;
+            }
+
             let tableHtml = `
                 <div class="result-summary">
-                    <strong>딜*버프력 분포 &nbsp; | &nbsp; 최저:</strong> ${stats.min.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
+                    ${placementLabel}<strong>딜*버프력 분포 &nbsp; | &nbsp; 최저:</strong> ${stats.min.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
                     <strong>평균:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
                     <strong>최고:</strong> ${stats.max.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}
                 </div>
@@ -1495,14 +1564,52 @@
                 }
             });
 
-            // 2. '국룰 파티 조합' (Standard Party)
+            // --- NEW: Control visibility for '업둥이 순서 고정' ---
             const standardPartyCheckbox = document.getElementById('standardParty');
+            const fixedUpdoongieOrderContainer = document.getElementById('fixedUpdoongieOrderContainer');
+            const fixedUpdoongieOrderCheckbox = document.getElementById('fixedUpdoongieOrder');
+            const updoongiePlacementContainer = document.getElementById('updoongiePlacementContainer');
+            const updoongiePlacementRadios = document.querySelectorAll('input[name="updoongiePlacement"]');
+
+            function toggleFixedUpdoongieControls() {
+                const isStandard = standardPartyCheckbox.checked;
+                const isFixedOrder = fixedUpdoongieOrderCheckbox.checked;
+
+                fixedUpdoongieOrderContainer.classList.toggle('hidden', !isStandard);
+                updoongiePlacementContainer.classList.toggle('hidden', !isStandard || !isFixedOrder);
+            }
+
+            // Load saved settings
             const savedStandardParty = localStorage.getItem('standardPartyEnabled');
-            if (savedStandardParty !== null) {
+             if (savedStandardParty !== null) {
                 standardPartyCheckbox.checked = JSON.parse(savedStandardParty);
             }
+            const savedFixedOrder = localStorage.getItem('fixedUpdoongieOrderEnabled');
+            if (savedFixedOrder !== null) {
+                fixedUpdoongieOrderCheckbox.checked = JSON.parse(savedFixedOrder);
+            }
+            const savedPlacement = localStorage.getItem('updoongiePlacement');
+            if (savedPlacement) {
+                document.querySelector(`input[name="updoongiePlacement"][value="${savedPlacement}"]`).checked = true;
+            }
+            
+            toggleFixedUpdoongieControls(); // Set initial visibility
+
+            // Add event listeners
             standardPartyCheckbox.addEventListener('change', () => {
                 localStorage.setItem('standardPartyEnabled', standardPartyCheckbox.checked);
+                toggleFixedUpdoongieControls();
+            });
+
+            fixedUpdoongieOrderCheckbox.addEventListener('change', () => {
+                localStorage.setItem('fixedUpdoongieOrderEnabled', fixedUpdoongieOrderCheckbox.checked);
+                toggleFixedUpdoongieControls();
+            });
+
+            updoongiePlacementRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    localStorage.setItem('updoongiePlacement', e.target.value);
+                });
             });
 
             // 3. '업둥버퍼 사용' (Use Updoong Buffer)
