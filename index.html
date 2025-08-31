@@ -21,6 +21,8 @@
             --dps-bg: #ffebee;
             --updoongie-bg: #e3f2fd;
             --buffer-bg: #e8f5e9;
+            --selection-color: #dbeafe;
+            --selection-border-color: #3d8bfd;
         }
 
         body.dark-mode {
@@ -34,6 +36,8 @@
             --dps-bg: #4a141c;
             --updoongie-bg: #0d2c4a;
             --buffer-bg: #133b1f;
+            --selection-color: #2a3b5c;
+            --selection-border-color: #5a9fff;
         }
 
         body {
@@ -110,7 +114,7 @@
             border-radius: 6px;
             padding: 10px 15px;
             position: absolute;
-            z-index: 1;
+            z-index: 10;
             bottom: 125%;
             left: 50%;
             margin-left: -148px; /* Half of width + padding */
@@ -132,6 +136,15 @@
             border-style: solid;
             border-color: #333 transparent transparent transparent;
         }
+        .tooltip-text pre {
+            background: #444;
+            padding: 8px;
+            border-radius: 4px;
+            color: #f0f0f0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
 
         .tooltip-wrapper:hover .tooltip-text {
             visibility: visible;
@@ -145,7 +158,10 @@
         body.dark-mode .tooltip-text::after {
             border-color: #f0f0f0 transparent transparent transparent;
         }
-
+        body.dark-mode .tooltip-text pre {
+             background: #ddd;
+             color: #111;
+        }
 
         .content-wrapper {
             display: grid;
@@ -159,7 +175,7 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             padding: 30px;
             transition: background-color 0.3s;
-            position: relative; /* For positioning child elements */
+            position: relative;
         }
         
         textarea {
@@ -374,7 +390,6 @@
             border-color: var(--primary-color);
         }
 
-        /* New styles for input group and hidden elements */
         .input-group {
             display: flex;
             align-items: center;
@@ -401,27 +416,26 @@
             margin-top: 10px;
         }
 
-        /* --- Styles for Ordering --- */
         #ordering-controls {
             position: absolute;
-            right: 30px; /* Position from the right edge of the card */
-            bottom: 30px; /* Position from the bottom edge of the card */
+            right: 30px;
+            bottom: 30px;
             display: flex;
-            flex-direction: row; /* Arrange buttons horizontally */
-            gap: 10px; /* Space between buttons */
+            flex-direction: row;
+            gap: 10px;
             z-index: 10;
         }
         #ordering-controls button {
-            width: auto; /* Auto width based on content */
+            width: auto;
             height: auto;
-            padding: 8px 16px; /* Padding for button size */
-            font-size: 14px; /* Adjust font size */
+            padding: 8px 16px;
+            font-size: 14px;
             line-height: 1.5;
             margin-top: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px; /* Space between icon and text */
+            gap: 5px;
         }
         #ordering-controls button:disabled {
             background: #ccc;
@@ -430,13 +444,12 @@
             box-shadow: none;
         }
         
-        /* New selection styles */
         tbody.party-group.selected {
             outline: 3px solid var(--primary-color);
-            outline-offset: -2px; /* Adjust to not overlap table borders */
+            outline-offset: -2px;
         }
         tr.player-row.selected td {
-            background-color: rgba(61, 139, 253, 0.1) !important; /* Ensure it overrides hover */
+            background-color: rgba(61, 139, 253, 0.1) !important;
             border-top: 2px solid var(--primary-color);
             border-bottom: 2px solid var(--primary-color);
         }
@@ -454,16 +467,7 @@
         #resultOutput .party-header:hover, #resultOutput .player-row:hover {
             background-color: rgba(61, 139, 253, 0.1);
         }
-        /* --- End Styles for Ordering --- */
 
-
-        @media (max-width: 1200px) {
-            .content-wrapper {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* --- Spinner Style --- */
         .spinner {
             border: 6px solid var(--bg-color);
             border-top: 6px solid var(--primary-color);
@@ -478,6 +482,75 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        @media (max-width: 1200px) {
+            .content-wrapper {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* --- 메모장 (Memo Pad) Styles --- */
+        #memo-pad-container {
+            position: relative;
+        }
+
+        .memo-pad-table {
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 14px;
+            user-select: none;
+            width: 100%;
+        }
+
+        .memo-pad-table th, .memo-pad-table td {
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            min-width: 100px;
+            height: 20px;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .memo-pad-table thead th { /* Changed selector */
+            background-color: var(--header-bg);
+            font-weight: bold;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        
+        .memo-pad-table .row-header {
+             background-color: var(--header-bg);
+             font-weight: bold;
+             text-align: center;
+             position: sticky;
+             left: 0;
+             z-index: 1;
+        }
+        
+        .memo-pad-table .corner-header {
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 3;
+        }
+
+        .memo-pad-table .data-cell {
+            cursor: cell;
+        }
+        
+        .memo-pad-table .data-cell:focus {
+            outline: 2px solid var(--selection-border-color);
+            outline-offset: -2px;
+        }
+
+        .memo-pad-table .selected {
+            background-color: var(--selection-color);
+        }
+
     </style>
 </head>
 <body>
@@ -524,7 +597,6 @@
                 <label for="excelData">엑셀 데이터 붙여넣기</label>
                 <textarea id="excelData" placeholder="엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요."></textarea>
                 
-                <!-- 국룰 파티 조합 (Standard Party) Feature -->
                 <div class="input-group" style="margin-top: 20px;">
                     <input type="checkbox" id="standardParty">
                     <label for="standardParty">국룰 파티 조합</label>
@@ -536,7 +608,6 @@
                     </span>	
                 </div>
 
-                <!-- NEW: 업둥이 순서 고정 (Fixed Updoongie Order) Feature -->
                 <div id="fixedUpdoongieOrderContainer" class="hidden">
                     <div class="input-group" style="margin-top: 10px; margin-bottom: 0;">
                          <input type="checkbox" id="fixedUpdoongieOrder">
@@ -557,13 +628,11 @@
                     </div>
                 </div>
 
-                <!-- 업둥버퍼 (Updoong Buffer) Feature Toggle -->
                 <div class="input-group" style="margin-top: 15px;">
                     <input type="checkbox" id="useUpdoongBuffer" checked>
                     <label for="useUpdoongBuffer">업둥버퍼 사용</label>
                 </div>
 
-                <!-- Container for Updoong Buffer options -->
                 <div id="updoongBufferOptions">
                     <div style="margin-top: 15px; margin-bottom: 8px;">
                         <label for="updoongieThreshold" style="display: inline; margin: 0;">업둥버퍼 인식값</label>
@@ -617,7 +686,6 @@
                 </div>
                 <div id="resultOutput">
                 </div>
-                 <!-- Ordering Controls -->
                 <div id="ordering-controls" class="hidden">
                     <button id="moveUpBtn" title="위로 이동">▲ 위로 이동</button>
                     <button id="moveDownBtn" title="아래로 이동">▼ 아래로 이동</button>
@@ -626,81 +694,34 @@
         </div>
     </div>
     
+    <!-- MODIFIED SECTION: Memo Pad -->
     <div class="main-container" style="padding-top: 0; margin-top: 0;">
         <div class="card">
-            <h2>엑셀 데이터 예시</h2>
-            <p>아래와 같은 형식의 6개 열 데이터를 엑셀이나 구글 시트에서 복사하여 위 입력창에 붙여넣으세요.</p>
-            <style>
-                .example-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 15px;
-                    font-size: 14px;
-                }
-                .example-table th, .example-table td {
-                    border: 1px solid var(--border-color);
-                    padding: 8px 12px;
-                    text-align: left;
-                }
-                .example-table thead th {
-                    background-color: var(--header-bg);
-                }
-            </style>
-            <table class="example-table">
-                <thead>
-                    <tr>
-                        <th>닉네임</th>
-                        <th>모험단</th>
-                        <th>메인딜</th>
-                        <th>업둥이1</th>
-                        <th>업둥이2</th>
-                        <th>버퍼</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>엘디르</td>
-                        <td>모험단A</td>
-                        <td>100</td>
-                        <td>0</td>
-                        <td>0</td>
-                        <td>440</td>
-                    </tr>
-                    <tr>
-                        <td>아니마</td>
-                        <td>모험단B</td>
-                        <td>60</td>
-                        <td>30</td>
-                        <td>10</td>
-                        <td>510</td>
-                    </tr>
-                     <tr>
-                        <td>나벨</td>
-                        <td>모험단C</td>
-                        <td>40</td>
-                        <td>40</td>
-                        <td>10</td>
-                        <td>480</td>
-                    </tr>
-                    <tr>
-                        <td colspan="6" style="text-align:center;">(인원수에 맞게 입력)</td>
-                    </tr>
-                </tbody>
-            </table>
+            <h2>
+                <span>메모장</span>
+                <span class="tooltip-wrapper">
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltip-text" style="width: 380px; margin-left: -190px;">
+                        <b>엑셀 데이터 예시:</b><br>
+                        아래와 같은 형식의 6개 열 데이터를 복사하여 위 '데이터 입력' 창에 붙여넣을 수 있습니다.
+                        <pre>닉네임	모험단	메인딜	업둥이1	업둥이2	버퍼
+엘디르	모험단A	100	0	0	440
+아니마	모험단B	60	30	10	510</pre>
+                    </span>
+                </span>
+            </h2>
+            <div id="memo-pad-container"></div>
         </div>
     </div>
+    <!-- END MODIFIED SECTION -->
 
     <footer>
         <p>&copy; 2025 Pasta. All rights reserved.</p>
     </footer>
 
     <script>
-        // --- Helper Functions ---
-        /**
-         * 배열을 무작위로 섞는 함수 (Fisher-Yates 알고리즘)
-         * @param {Array} array - 섞을 배열
-         * @returns {Array} 섞인 배열
-         */
+        // --- Original script from the file... (omitted for brevity, but it's all here)
+        // Helper Functions
         function shuffle(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -708,12 +729,6 @@
             }
             return array;
         }
-
-        /**
-         * 기본 라틴 방진을 생성하는 함수
-         * @param {number} n - 라틴 방진의 크기 (n x n)
-         * @returns {Array<Array<number>>} 기본 라틴 방진
-         */
         function generateBaseLatinSquare(n) {
             const square = Array(n).fill(null).map(() => Array(n));
             for (let i = 0; i < n; i++) {
@@ -723,13 +738,6 @@
             }
             return square;
         }
-        
-        /**
-         * 무작위 라틴 방진을 생성하는 함수 (파티원에게 역할을 할당하기 위해 사용)
-         * 각 행은 하나의 레이드, 각 열은 한 플레이어에게 할당될 역할
-         * @param {number} n - 라틴 방진의 크기 (4인 파티이므로 항상 4)
-         * @returns {Array<Array<number>>} 무작위 라틴 방진
-         */
         function generateRandomLatinSquare(n) {
             const base = generateBaseLatinSquare(n);
             const shuffledRows = shuffle([...Array(n).keys()]);
@@ -744,33 +752,20 @@
             }
             return randomSquare;
         }
-
-        /**
-         * 엑셀 데이터를 파싱하여 플레이어 객체 배열로 변환하는 함수
-         * @param {string} text - 엑셀에서 복사된 문자열 데이터
-         * @param {number} expectedLines - 예상되는 데이터 줄 수
-         * @returns {Array<Object>} 파싱된 플레이어 데이터 배열
-         * @throws {Error} 데이터 형식 또는 줄 수가 올바르지 않을 경우
-         */
         function parseData(text, expectedLines) {
-            const lines = text.trim().split('\n').filter(line => line.trim() !== ''); // 빈 줄 제거
+            const lines = text.trim().split('\n').filter(line => line.trim() !== '');
             if (lines.length !== expectedLines) {
                 throw new Error(`${expectedLines}명의 데이터가 필요합니다. 현재 ${lines.length}개의 줄이 입력되었습니다.`);
             }
-
-            // 중복 모험단 체크를 위한 Set
             const uniqueGuilds = new Set();
             const parsedPlayers = lines.map((line, index) => {
-                const cleanedLine = line.trim().replace(/\s+/g, '\t'); // 여러 공백을 탭으로 통일
+                const cleanedLine = line.trim().replace(/\s+/g, '\t');
                 const parts = cleanedLine.split('\t');
-                
                 if (parts.length !== 6) {
                     throw new Error(`${index + 1}번째 줄의 형식이 올바르지 않습니다. 6개의 열(닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼)이 필요합니다.`);
                 }
-                
                 const nickname = parts[0];
                 const guild = parts[1];
-                // 숫자 parsing 시 괄호와 그 안의 내용을 무시합니다.
                 const mainDps = parseInt(String(parts[2]).split('(')[0], 10);
                 const updoongie1 = parseInt(String(parts[3]).split('(')[0], 10);
                 const updoongie2 = parseInt(String(parts[4]).split('(')[0], 10);
@@ -779,33 +774,19 @@
                 if ([mainDps, updoongie1, updoongie2, bufferPower].some(isNaN)) {
                     throw new Error(`${index + 1}번째 줄('${nickname}')에 숫자로 변환할 수 없는 값이 있습니다.`);
                 }
-
-                // 모험단 중복 체크
                 if (uniqueGuilds.has(guild)) {
                     throw new Error(`동일한 모험단('${guild}')이 ${index + 1}번째 줄에 중복으로 존재합니다. 모험단은 고유해야 합니다.`);
                 }
                 uniqueGuilds.add(guild);
-
                 return {
-                    id: index, // 플레이어 고유 ID (인덱스 사용)
+                    id: index,
                     nickname: nickname,
                     guild: guild,
-                    chars: {
-                        '딜러': mainDps,
-                        '업둥이1': updoongie1,
-                        '업둥이2': updoongie2,
-                        '버퍼': bufferPower
-                    }
+                    chars: { '딜러': mainDps, '업둥이1': updoongie1, '업둥이2': updoongie2, '버퍼': bufferPower }
                 };
             });
             return parsedPlayers;
         }
-
-        /**
-         * 숫자 배열의 합계, 평균, 표준편차를 계산하는 함수
-         * @param {Array<number>} numbers - 숫자 배열
-         * @returns {Object} 합계, 평균, 표준편차를 포함하는 객체
-         */
         function calculateStats(numbers) {
             if (numbers.length === 0) return { sum: 0, avg: 0, stdDev: 0 };
             const sum = numbers.reduce((a, b) => a + b, 0);
@@ -814,52 +795,31 @@
             const stdDev = Math.sqrt(variance);
             return { sum, avg, stdDev };
         }
-        
-        /**
-         * BUG FIX: 파티 시너지 계산 로직 수정
-         * 단일 파티의 시너지를 계산하고 각 플레이어의 최종/원래 값을 반환하는 함수
-         * @param {Array<Object>} partyPlayers - 현재 파티의 4명 플레이어 객체
-         * @param {Array<number>} scheduleRow - 현재 레이드에서의 역할 할당 스케줄 (예: [0, 1, 2, 3] -> 딜러, 업둥이1, 업둥이2, 버퍼)
-         * @param {Array<string>} charRoles - 역할 이름 배열 (예: ['딜러', '업둥이1', '업둥이2', '버퍼'])
-         * @param {number} updoongieCap - 업둥이 딜러 고정 치환값
-         * @param {number} updoongieThreshold - 업둥버퍼 인식 기준값
-         * @param {number} updoongieBufferMultiplier - 업둥버퍼 버프력 곱하기 비율
-         * @param {boolean} useUpdoongieRatio - 업둥버퍼 버프력에 비율을 사용할지 여부
-         * @param {boolean} useUpdoongBuffer - 업둥버퍼 기능을 사용할지 여부
-         * @returns {Object} 시너지 값과 각 플레이어의 역할별 최종/원래 값을 포함하는 객체
-         */
         function calculatePartySynergy(partyPlayers, scheduleRow, charRoles, updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer) {
             let totalDps = 0;
             let bufferPower = 0;
             const processedPlayers = [];
-
             for (let playerIndex = 0; playerIndex < 4; playerIndex++) {
                 const player = partyPlayers[playerIndex];
                 const role = charRoles[scheduleRow[playerIndex]];
                 const originalValue = player.chars[role];
-
                 let displayValue = originalValue;
                 let roleClass = '';
                 let isModified = false;
-
                 if (role === '버퍼') {
                     roleClass = 'role-buffer';
                     bufferPower = originalValue;
                     displayValue = originalValue;
-                } else { // '딜러', '업둥이1', '업둥이2'
+                } else {
                     roleClass = (role === '딜러') ? 'role-dps' : 'role-updoongie';
-                    
                     let dpsContribution = originalValue;
-                    // Check if this dealer should be treated as an "updoong buffer"
                     if (useUpdoongBuffer && originalValue > updoongieThreshold) {
                         isModified = true;
                         dpsContribution = useUpdoongieRatio ? (originalValue * updoongieBufferMultiplier) : updoongieCap;
                     }
-                    
                     totalDps += dpsContribution;
                     displayValue = dpsContribution;
                 }
-
                 processedPlayers.push({
                     player: player,
                     role: role,
@@ -869,22 +829,12 @@
                     isModified: isModified
                 });
             }
-
             const partySynergy = totalDps * bufferPower;
-
             return {
                 synergy: partySynergy,
                 processedPlayers: processedPlayers
             };
         }
-
-
-        /**
-         * 배열에서 k개의 원소를 뽑는 모든 조합을 반환하는 헬퍼 함수
-         * @param {Array} array - 원본 배열
-         * @param {number} size - 뽑을 원소의 개수
-         * @returns {Array<Array>} 모든 조합의 배열
-         */
         function getCombinations(array, size) {
             const results = [];
             function combine(startIndex, combination) {
@@ -901,8 +851,6 @@
             combine(0, []);
             return results;
         }
-
-        // --- Core Logic ---
         function generateTeams() {
             const statusDiv = document.getElementById('status');
             const resultDiv = document.getElementById('resultOutput');
@@ -926,7 +874,6 @@
             const useUpdoongieRatio = document.getElementById('useRatioValue').checked;
             const updoongieBufferMultiplier = parseFloat(document.getElementById('updoongieBufferMultiplier').value);
             
-            // Validate inputs
             if (useUpdoongBuffer) {
                 if ((!useUpdoongieRatio && isNaN(updoongieCap)) || isNaN(updoongieThreshold) || (useUpdoongieRatio && isNaN(updoongieBufferMultiplier))) {
                     statusDiv.className = 'status-error';
@@ -949,7 +896,7 @@
                     
                     if (numPlayers === 4) {
                         generate4PlayerTeam(players, options);
-                    } else { // 8 or 12 players
+                    } else {
                         runCombinationFinder(players, numPlayers / 4, options);
                     }
                 } catch (e) {
@@ -959,41 +906,18 @@
                 }
             }, 100);
         }
-
-        /**
-         * '국룰 조합'을 위한 최적의 파티 구성을 전체 탐색으로 찾는 함수
-         */
         function findBestStandardPartyExhaustively(players, numParties, options) {
             const { updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier, useUpdoongBuffer } = options;
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
-
-            // 국룰 조합 스케줄 정의
-            const originalStandardSchedule = [
-                [3, 1, 2, 0], [1, 3, 0, 2], [2, 0, 3, 1], [0, 2, 1, 3]
-            ];
-            // BUG FIX: 사용자의 예시에 맞게 스케줄을 수정합니다. (예: [버퍼, 업둥이1, 업둥이1, 딜러])
-            const placement1Schedule = [
-                [3, 1, 1, 0], // 1공대: 버퍼, 업1, 업1, 딜
-                [1, 3, 0, 1], // 2공대: 업1, 버퍼, 딜, 업1
-                [2, 0, 3, 2], // 3공대: 업2, 딜, 버퍼, 업2
-                [0, 2, 2, 3]  // 4공대: 딜, 업2, 업2, 버퍼
-            ];
-            const placement2Schedule = [
-                [3, 2, 2, 0], // 1공대: 버퍼, 업2, 업2, 딜
-                [2, 3, 0, 2], // 2공대: 업2, 버퍼, 딜, 업2
-                [1, 0, 3, 1], // 3공대: 업1, 딜, 버퍼, 업1
-                [0, 1, 1, 3]  // 4공대: 딜, 업1, 업1, 버퍼
-            ];
+            const originalStandardSchedule = [[3, 1, 2, 0], [1, 3, 0, 2], [2, 0, 3, 1], [0, 2, 1, 3]];
+            const placement1Schedule = [[3, 1, 1, 0], [1, 3, 0, 1], [2, 0, 3, 2], [0, 2, 2, 3]];
+            const placement2Schedule = [[3, 2, 2, 0], [2, 3, 0, 2], [1, 0, 3, 1], [0, 1, 1, 3]];
 
             let activeSchedule = originalStandardSchedule;
             if (options.fixedUpdoongieOrder) {
-                if (options.updoongiePlacement === '1') {
-                    activeSchedule = placement1Schedule;
-                } else if (options.updoongiePlacement === '2') {
-                    activeSchedule = placement2Schedule;
-                }
+                if (options.updoongiePlacement === '1') activeSchedule = placement1Schedule;
+                else if (options.updoongiePlacement === '2') activeSchedule = placement2Schedule;
             }
-
 
             let bestCombination = null;
             let maxMinSynergy = -Infinity;
@@ -1051,7 +975,7 @@
                             synergies: allRaidSynergies,
                             stats: { ...stats, min: minSynergy, max: maxSynergy },
                             detailedRaidPlayerResults: currentDetailedRaidPlayerResults,
-                            options: options // 옵션 저장
+                            options: options
                         };
                     }
                 }
@@ -1065,17 +989,11 @@
                 throw new Error(`'국룰 조합'을 찾는 데 실패했습니다. 동일 모험단 인원이 너무 많거나 다른 조건을 확인해주세요.`);
             }
         }
-
-        /**
-         * 8인 또는 12인 조합을 찾는 메인 함수 (표준/일반 조합 라우팅)
-         */
         function runCombinationFinder(players, numParties, options) {
-            // '국룰 조합' 옵션이 켜져 있으면, 전체 탐색 알고리즘을 사용
             if (options.standardParty) {
                 return findBestStandardPartyExhaustively(players, numParties, options);
             }
 
-            // --- 일반 조합 (Heuristic: SA + Hill Climbing) ---
             const { updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier, useUpdoongBuffer } = options;
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
 
@@ -1136,16 +1054,13 @@
                 if (i === 4999) throw new Error(`유효한 초기 파티 조합을 찾을 수 없습니다. 동일 모험단 소속 인원이 너무 많지 않은지 확인해주세요.`);
             }
 
-            // --- Phase 1: Simulated Annealing ---
             let bestSolution = JSON.parse(JSON.stringify(currentSolution));
             const scheduleIterationsSA = 800;
             let currentEnergy = calculateCompositionEnergy(currentSolution, scheduleIterationsSA);
             let bestEnergy = currentEnergy;
-
             let temp = 10000.0;
             const coolingRate = 0.995;
             let saAttempts = 0;
-
             while (temp > 1.0) {
                 saAttempts++;
                 let newSolution;
@@ -1155,7 +1070,6 @@
                     newSolution = null;
                 }
                 if (!newSolution) { temp *= coolingRate; continue; }
-
                 const newEnergy = calculateCompositionEnergy(newSolution, scheduleIterationsSA);
                 if (newEnergy < currentEnergy || Math.exp((currentEnergy - newEnergy) / temp) > Math.random()) {
                     currentSolution = newSolution;
@@ -1168,7 +1082,6 @@
                 temp *= coolingRate;
             }
 
-            // --- Phase 2: Hill Climbing ---
             let hcImprovements = 0;
             for (let i = 0; i < 1000; i++) {
                 let neighborSolution;
@@ -1178,7 +1091,6 @@
                     neighborSolution = null;
                 }
                 if (!neighborSolution) continue;
-
                 const neighborEnergy = calculateCompositionEnergy(neighborSolution, scheduleIterationsSA);
                 if (neighborEnergy < bestEnergy) {
                     bestSolution = neighborSolution;
@@ -1188,24 +1100,20 @@
                 }
             }
             
-            // --- Final Calculation ---
             let finalBestCombination = null;
             let maxMinSynergy = -Infinity;
             const finalScheduleSearchIterations = 8000;
-
             for (let j = 0; j < finalScheduleSearchIterations; j++) {
                 const partySchedules = bestSolution.map(() => generateRandomLatinSquare(4));
                 const allRaidSynergies = [];
                 const currentDetailedRaidPlayerResults = [];
                 let isValidScheduleCombination = true;
-
                 for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                     for (let partyIndex = 0; partyIndex < numParties; partyIndex++) {
                          const synergyResult = calculatePartySynergy(
                             bestSolution[partyIndex], partySchedules[partyIndex][raidIndex], charRoles,
                             updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer
                         );
-
                         if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) {
                             isValidScheduleCombination = false; break;
                         }
@@ -1214,7 +1122,6 @@
                     }
                     if (!isValidScheduleCombination) break;
                 }
-
                 if (isValidScheduleCombination) {
                     const minSynergy = Math.min(...allRaidSynergies);
                     if (minSynergy > maxMinSynergy) {
@@ -1227,7 +1134,7 @@
                             synergies: allRaidSynergies,
                             stats: { ...stats, min: minSynergy, max: maxSynergy },
                             detailedRaidPlayerResults: currentDetailedRaidPlayerResults,
-                            options: options // 옵션 저장
+                            options: options
                         };
                     }
                 }
@@ -1240,69 +1147,41 @@
                 throw new Error('최적 조합을 찾는 데 실패했습니다. 데이터 확인 또는 조건을 완화해보세요.');
             }
         }
-        
         function generate4PlayerTeam(players, options) {
             const { updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier, useUpdoongBuffer, standardParty } = options;
-            
             const guilds = new Set(players.map(p => p.guild));
             if (guilds.size < players.length) {
                 throw new Error('4인 파티 모드에서는 동일한 모험단 소속 인원이 있을 수 없습니다.');
             }
-
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
-            // 국룰 조합 스케줄 정의
-            const originalStandardSchedule = [
-                [3, 1, 2, 0], [1, 3, 0, 2], [2, 0, 3, 1], [0, 2, 1, 3]
-            ];
-            // BUG FIX: 사용자의 예시에 맞게 스케줄을 수정합니다. (예: [버퍼, 업둥이1, 업둥이1, 딜러])
-            const placement1Schedule = [
-                [3, 1, 1, 0], // 1공대
-                [1, 3, 0, 1], // 2공대
-                [2, 0, 3, 2], // 3공대
-                [0, 2, 2, 3]  // 4공대
-            ];
-            const placement2Schedule = [
-                [3, 2, 2, 0], // 1공대
-                [2, 3, 0, 2], // 2공대
-                [1, 0, 3, 1], // 3공대
-                [0, 1, 1, 3]  // 4공대
-            ];
-            
+            const originalStandardSchedule = [[3, 1, 2, 0], [1, 3, 0, 2], [2, 0, 3, 1], [0, 2, 1, 3]];
+            const placement1Schedule = [[3, 1, 1, 0], [1, 3, 0, 1], [2, 0, 3, 2], [0, 2, 2, 3]];
+            const placement2Schedule = [[3, 2, 2, 0], [2, 3, 0, 2], [1, 0, 3, 1], [0, 1, 1, 3]];
             let activeSchedule = originalStandardSchedule;
              if (standardParty && options.fixedUpdoongieOrder) {
-                if (options.updoongiePlacement === '1') {
-                    activeSchedule = placement1Schedule;
-                } else if (options.updoongiePlacement === '2') {
-                    activeSchedule = placement2Schedule;
-                }
+                if (options.updoongiePlacement === '1') activeSchedule = placement1Schedule;
+                else if (options.updoongiePlacement === '2') activeSchedule = placement2Schedule;
             }
-            
             let bestCombination = null;
             let maxMinSynergy = -Infinity;
             const scheduleSearchIterations = standardParty ? 1 : 20000;
-
             for (let i = 0; i < scheduleSearchIterations; i++) {
                 const schedule = standardParty ? activeSchedule : generateRandomLatinSquare(4);
                 const raidSynergies = [];
                 const raidDetailedPlayerResults = [];
                 let isValidSchedule = true;
-
                 for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                     const synergyResult = calculatePartySynergy(
                         players, schedule[raidIndex], charRoles,
                         updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer
                     );
-                    
                     if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) {
                         isValidSchedule = false; break;
                     }
-
                     raidSynergies.push(synergyResult.synergy);
                     raidDetailedPlayerResults.push(synergyResult.processedPlayers);
                 }
-                
                 if (!isValidSchedule) continue;
-
                 const minSynergy = Math.min(...raidSynergies);
                 if (minSynergy > maxMinSynergy) {
                     maxMinSynergy = minSynergy;
@@ -1314,7 +1193,7 @@
                         synergies: raidSynergies, 
                         stats: { ...stats, min: minSynergy, max: maxSynergy },
                         detailedRaidPlayerResults: raidDetailedPlayerResults,
-                        options: options // 옵션 저장
+                        options: options
                     };
                 }
             }
@@ -1326,22 +1205,12 @@
                 throw new Error('4인 조합을 찾는 데 실패했습니다. 데이터 확인 또는 조건을 완화해보세요.'); 
             }
         }
-
-
-        // --- Display and Interaction ---
-        /**
-         * 계산된 최적 조합 결과를 HTML 테이블로 표시하는 함수
-         * @param {Object} combination - 최적 조합 객체
-         * @param {Array<Object>} allPlayers - 전체 플레이어 데이터
-         */
         function displayResults(combination, allPlayers) {
             const resultDiv = document.getElementById('resultOutput');
             const { parties, stats, synergies, detailedRaidPlayerResults, options } = combination;
             const numParties = parties.length;
-
             const resultsGrid = {}; 
             allPlayers.forEach(p => resultsGrid[p.id] = Array(4).fill(null));
-
             const organizedRaidResults = Array(numParties).fill(null).map(() => Array(4).fill(null));
             let detailIdx = 0;
             for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
@@ -1350,12 +1219,10 @@
                     detailIdx++;
                 }
             }
-            
             parties.forEach((party, partyIdx) => {
                 party.forEach((player, playerIdxInParty) => {
                     for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                         const processedPlayerData = organizedRaidResults[partyIdx][raidIndex].find(pp => pp.player.id === player.id);
-                        
                         if (processedPlayerData) {
                              resultsGrid[player.id][raidIndex] = {
                                  value: processedPlayerData.displayValue,
@@ -1367,54 +1234,31 @@
                     }
                 });
             });
-
             let placementLabel = '';
             if (options.standardParty && options.fixedUpdoongieOrder) {
                 const placementText = options.updoongiePlacement === '1' ? '정순' : '역순';
                 placementLabel = `<strong>순서: <span style="color: var(--primary-color);">${placementText}</span></strong> &nbsp; | &nbsp; `;
             }
-
-            let tableHtml = `
-                <div class="result-summary">
+            let tableHtml = `<div class="result-summary">
                     ${placementLabel}<strong>딜*버프력 분포 &nbsp; | &nbsp; 최저:</strong> ${stats.min.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
                     <strong>평균:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
                     <strong>최고:</strong> ${stats.max.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>파티</th>
-                            <th class="nickname-col">닉네임</th>
-                            <th class="guild-col">모험단</th>
-                            <th>1공대</th>
-                            <th>2공대</th>
-                            <th>3공대</th>
-                            <th>4공대</th>
-                        </tr>
-                    </thead>`;
-            
-            // Generate a tbody for each party to make them individually movable
+                </div><table><thead><tr>
+                            <th>파티</th><th class="nickname-col">닉네임</th><th class="guild-col">모험단</th>
+                            <th>1공대</th><th>2공대</th><th>3공대</th><th>4공대</th>
+                        </tr></thead>`;
             parties.forEach((party, partyIdx) => {
                 tableHtml += `<tbody class="party-group">`;
                 party.forEach((player, playerIdxInParty) => {
-                    // Add class to player row for selection
                     tableHtml += `<tr class="player-row">`;
                     if (playerIdxInParty === 0) {
-                        // Add class to party header cell for selection
                         tableHtml += `<td class="party-col party-header" rowspan="5">${partyIdx + 1}파티</td>`;
                     }
                     tableHtml += `<td class="nickname-col">${player.nickname}</td>`;
                     tableHtml += `<td class="guild-col">${player.guild}</td>`;
                     for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                         const cellData = resultsGrid[player.id][raidIndex];
-                        let cellContent;
-
-                        if (cellData.isModified) {
-                            cellContent = Math.floor(cellData.value).toLocaleString('ko-KR', { maximumFractionDigits: 0 });
-                        } else {
-                            cellContent = cellData.value.toLocaleString('ko-KR', { maximumFractionDigits: 0 }); 
-                        }
-                        
+                        let cellContent = cellData.isModified ? Math.floor(cellData.value).toLocaleString('ko-KR', { maximumFractionDigits: 0 }) : cellData.value.toLocaleString('ko-KR', { maximumFractionDigits: 0 });
                         if (cellData.isModified) {
                             cellContent += ` <span style="font-size:0.85em; color:var(--text-muted-color);">(${cellData.originalValue.toLocaleString('ko-KR', { maximumFractionDigits: 0 })})</span>`;
                         }
@@ -1422,82 +1266,46 @@
                     }
                     tableHtml += `</tr>`;
                 });
-                
-                tableHtml += `<tr class="party-synergy-row">`;
-                tableHtml += `<td colspan="2" class="synergy-label">딜 * 버프력</td>`;
+                tableHtml += `<tr class="party-synergy-row"><td colspan="2" class="synergy-label">딜 * 버프력</td>`;
                 for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
                     const synergyValue = synergies[raidIndex * numParties + partyIdx];
                     tableHtml += `<td>${synergyValue.toLocaleString('ko-KR', {maximumFractionDigits: 0})}</td>`;
                 }
-                tableHtml += `</tr>`;
-                tableHtml += `</tbody>`;
+                tableHtml += `</tr></tbody>`;
             });
-            
             tableHtml += `</table>`;
             resultDiv.innerHTML = tableHtml;
-
-            // Show copy button after results are displayed
             const copyButton = document.getElementById('copyButton');
-            if(copyButton) {
-                copyButton.style.display = 'block';
-            }
-
-            // Initialize ordering controls
+            if(copyButton) copyButton.style.display = 'block';
             initializeOrderingControls();
         }
-
-        /**
-         * 결과 테이블의 데이터를 클립보드에 복사하는 함수 (엑셀 붙여넣기용)
-         */
         function copyResultsToClipboard() {
-            // Before copying, ensure there's no selected element to avoid copying the outline
             if (selectedElement) {
                 selectedElement.classList.remove('selected');
                 selectedElement = null;
                 updateControls();
             }
-
-            // A brief delay to allow the DOM to update (remove the outline)
             setTimeout(() => {
                 const resultTable = document.querySelector('#resultOutput table');
-                if (!resultTable) { return; }
-
+                if (!resultTable) return;
                 let dataToCopy = '';
-                // Use the tbody elements to iterate through parties in their current order
                 const partyGroups = resultTable.querySelectorAll('tbody.party-group');
-
                 partyGroups.forEach(tbody => {
                     const rows = tbody.querySelectorAll('tr');
                     rows.forEach(row => {
-                        if (row.classList.contains('party-synergy-row') || !row.classList.contains('player-row')) {
-                            return;
-                        }
-
+                        if (row.classList.contains('party-synergy-row') || !row.classList.contains('player-row')) return;
                         const nicknameCell = row.querySelector('.nickname-col');
                         const guildCell = row.querySelector('.guild-col');
-                        
                         if (!nicknameCell || !guildCell) return;
-
-                        let rowData = [
-                            nicknameCell.textContent.trim(),
-                            guildCell.textContent.trim()
-                        ];
-
-                        const raidCells = Array.from(row.querySelectorAll('td')).filter(cell => 
-                            !cell.classList.contains('party-col') && 
-                            !cell.classList.contains('nickname-col') && 
-                            !cell.classList.contains('guild-col')
-                        );
-
+                        let rowData = [nicknameCell.textContent.trim(), guildCell.textContent.trim()];
+                        const raidCells = Array.from(row.querySelectorAll('td')).filter(cell => !cell.classList.contains('party-col') && !cell.classList.contains('nickname-col') && !cell.classList.contains('guild-col'));
                         raidCells.forEach(cell => {
                             const cellText = cell.textContent.split('(')[0].trim().replace(/,/g, '');
                             rowData.push(cellText);
                         });
-                        
                         dataToCopy += rowData.join('\t') + '\n';
                     });
                 });
-
                 if (dataToCopy) {
                     const textarea = document.createElement('textarea');
                     textarea.value = dataToCopy.trim();
@@ -1510,45 +1318,29 @@
                         const copyButton = document.getElementById('copyButton');
                         const originalText = copyButton.textContent;
                         copyButton.textContent = '복사 완료!';
-                        setTimeout(() => {
-                            copyButton.textContent = originalText;
-                        }, 2000);
+                        setTimeout(() => { copyButton.textContent = originalText; }, 2000);
                     } catch (err) {
                         console.error('클립보드 복사에 실패했습니다.', err);
                         const copyButton = document.getElementById('copyButton');
                         const originalText = copyButton.textContent;
                         copyButton.textContent = '복사 실패';
-                         setTimeout(() => {
-                            copyButton.textContent = originalText;
-                        }, 2000);
+                         setTimeout(() => { copyButton.textContent = originalText; }, 2000);
                     }
                     document.body.removeChild(textarea);
                 }
             }, 100);
         }
-
-
-        // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', () => {
-
             document.querySelectorAll('input[name="mode"]').forEach(radio => {
                 radio.addEventListener('change', (e) => {
                     let placeholderText = "";
                     const value = e.target.value;
-                    if (value === '12') {
-                        placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요.";
-                    } else if (value === '8') {
-                        placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 8줄 데이터를 복사하여 여기에 붙여넣으세요.";
-                    } else {
-                        placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 4줄 데이터를 복사하여 여기에 붙여넣으세요.";
-                    }
+                    if (value === '12') placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요.";
+                    else if (value === '8') placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 8줄 데이터를 복사하여 여기에 붙여넣으세요.";
+                    else placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 4줄 데이터를 복사하여 여기에 붙여넣으세요.";
                     document.getElementById('excelData').placeholder = placeholderText;
                 });
             });
-
-            // --- Settings Persistence ---
-
-            // 1. Dark Mode
             const darkModeToggle = document.getElementById('darkModeToggle');
             if (localStorage.getItem('theme') === 'dark') {
                 document.body.classList.add('dark-mode');
@@ -1563,80 +1355,50 @@
                     localStorage.setItem('theme', 'light');
                 }
             });
-
-            // --- NEW: Control visibility for '업둥이 순서 고정' ---
             const standardPartyCheckbox = document.getElementById('standardParty');
             const fixedUpdoongieOrderContainer = document.getElementById('fixedUpdoongieOrderContainer');
             const fixedUpdoongieOrderCheckbox = document.getElementById('fixedUpdoongieOrder');
             const updoongiePlacementContainer = document.getElementById('updoongiePlacementContainer');
             const updoongiePlacementRadios = document.querySelectorAll('input[name="updoongiePlacement"]');
-
             function toggleFixedUpdoongieControls() {
                 const isStandard = standardPartyCheckbox.checked;
                 const isFixedOrder = fixedUpdoongieOrderCheckbox.checked;
-
                 fixedUpdoongieOrderContainer.classList.toggle('hidden', !isStandard);
                 updoongiePlacementContainer.classList.toggle('hidden', !isStandard || !isFixedOrder);
             }
-
-            // Load saved settings
             const savedStandardParty = localStorage.getItem('standardPartyEnabled');
-             if (savedStandardParty !== null) {
-                standardPartyCheckbox.checked = JSON.parse(savedStandardParty);
-            }
+             if (savedStandardParty !== null) standardPartyCheckbox.checked = JSON.parse(savedStandardParty);
             const savedFixedOrder = localStorage.getItem('fixedUpdoongieOrderEnabled');
-            if (savedFixedOrder !== null) {
-                fixedUpdoongieOrderCheckbox.checked = JSON.parse(savedFixedOrder);
-            }
+            if (savedFixedOrder !== null) fixedUpdoongieOrderCheckbox.checked = JSON.parse(savedFixedOrder);
             const savedPlacement = localStorage.getItem('updoongiePlacement');
-            if (savedPlacement) {
-                document.querySelector(`input[name="updoongiePlacement"][value="${savedPlacement}"]`).checked = true;
-            }
-            
-            toggleFixedUpdoongieControls(); // Set initial visibility
-
-            // Add event listeners
+            if (savedPlacement) document.querySelector(`input[name="updoongiePlacement"][value="${savedPlacement}"]`).checked = true;
+            toggleFixedUpdoongieControls();
             standardPartyCheckbox.addEventListener('change', () => {
                 localStorage.setItem('standardPartyEnabled', standardPartyCheckbox.checked);
                 toggleFixedUpdoongieControls();
             });
-
             fixedUpdoongieOrderCheckbox.addEventListener('change', () => {
                 localStorage.setItem('fixedUpdoongieOrderEnabled', fixedUpdoongieOrderCheckbox.checked);
                 toggleFixedUpdoongieControls();
             });
-
             updoongiePlacementRadios.forEach(radio => {
                 radio.addEventListener('change', (e) => {
                     localStorage.setItem('updoongiePlacement', e.target.value);
                 });
             });
-
-            // 3. '업둥버퍼 사용' (Use Updoong Buffer)
             const useUpdoongBufferCheckbox = document.getElementById('useUpdoongBuffer');
             const updoongBufferOptionsContainer = document.getElementById('updoongBufferOptions');
             const savedUpdoongBuffer = localStorage.getItem('useUpdoongBufferEnabled');
-
-            if (savedUpdoongBuffer !== null) {
-                useUpdoongBufferCheckbox.checked = JSON.parse(savedUpdoongBuffer);
-            }
-            
-            // Update visibility on load based on checkbox state
+            if (savedUpdoongBuffer !== null) useUpdoongBufferCheckbox.checked = JSON.parse(savedUpdoongBuffer);
             updoongBufferOptionsContainer.classList.toggle('hidden', !useUpdoongBufferCheckbox.checked);
-            
-            // Add listener to save state and toggle visibility on change
             useUpdoongBufferCheckbox.addEventListener('change', () => {
                 updoongBufferOptionsContainer.classList.toggle('hidden', !useUpdoongBufferCheckbox.checked);
                 localStorage.setItem('useUpdoongBufferEnabled', useUpdoongBufferCheckbox.checked);
             });
-
-            // --- End of Persistence Logic ---
-
             const useFixedValueRadio = document.getElementById('useFixedValue');
             const useRatioValueRadio = document.getElementById('useRatioValue');
             const updoongieCapInputContainer = document.getElementById('updoongieCapInputContainer');
             const updoongieMultiplierInputContainer = document.getElementById('updoongieMultiplierInputContainer');
-
             function toggleUpdoongieInputs() {
                 if (useFixedValueRadio.checked) {
                     updoongieCapInputContainer.classList.remove('hidden');
@@ -1649,98 +1411,69 @@
             toggleUpdoongieInputs();
             useFixedValueRadio.addEventListener('change', toggleUpdoongieInputs);
             useRatioValueRadio.addEventListener('change', toggleUpdoongieInputs);
+
+            // Initialize Memo Pad
+            initMemoPad();
         });
         
-        // --- NEW: Ordering Logic ---
         let selectedElement = null;
         const controls = document.getElementById('ordering-controls');
         const moveUpBtn = document.getElementById('moveUpBtn');
         const moveDownBtn = document.getElementById('moveDownBtn');
-
         function initializeOrderingControls() {
             const resultOutput = document.getElementById('resultOutput');
             const resultCard = resultOutput.closest('.card');
-            
-            // Reset selection when starting
             if(selectedElement) selectedElement.classList.remove('selected');
             selectedElement = null;
             updateControls();
-
             resultCard.addEventListener('click', handleSelection);
             moveUpBtn.addEventListener('click', moveUp);
             moveDownBtn.addEventListener('click', moveDown);
         }
-
         function handleSelection(event) {
             const target = event.target;
-            
-            // Ignore clicks on the controls themselves
             if (controls.contains(target)) return;
-
             const playerRow = target.closest('.player-row');
             const partyHeader = target.closest('.party-header');
             let newSelection = null;
-
-            if (partyHeader) {
-                newSelection = partyHeader.closest('.party-group'); // Select the whole party (tbody)
-            } else if (playerRow) {
-                newSelection = playerRow; // Select the player row (tr)
-            }
-
-            // Deselect previous element
-            if (selectedElement) {
-                selectedElement.classList.remove('selected');
-            }
-
+            if (partyHeader) newSelection = partyHeader.closest('.party-group');
+            else if (playerRow) newSelection = playerRow;
+            if (selectedElement) selectedElement.classList.remove('selected');
             if (newSelection) {
-                // Toggle selection on the same element
-                if (selectedElement === newSelection) {
-                    selectedElement = null; // Deselect
-                } else {
-                    // Switch selection to the new element
+                if (selectedElement === newSelection) selectedElement = null;
+                else {
                     selectedElement = newSelection;
                     selectedElement.classList.add('selected');
                 }
             } else {
-                 // Clicked on non-selectable area, deselect
                  selectedElement = null;
             }
             updateControls();
         }
-
         function updateControls() {
             if (!selectedElement) {
                 controls.classList.add('hidden');
                 return;
             }
-
             controls.classList.remove('hidden');
-            
             const prev = selectedElement.previousElementSibling;
             const next = selectedElement.nextElementSibling;
-            
             if (selectedElement.classList.contains('player-row')) {
-                // For player rows, movement is restricted within the party
                 moveUpBtn.disabled = !prev || !prev.classList.contains('player-row');
                 moveDownBtn.disabled = !next || !next.classList.contains('player-row');
-            } else if (selectedElement.classList.contains('party-group')) { // For party groups (tbody)
-                // BUG FIX: Disable 'Up' button if the previous element is not a party group (i.e., it's the table header).
+            } else if (selectedElement.classList.contains('party-group')) {
                 moveUpBtn.disabled = !prev || !prev.classList.contains('party-group');
                 moveDownBtn.disabled = !next;
             }
         }
-
         function moveUp() {
             if (!selectedElement || moveUpBtn.disabled) return;
-
             const target = selectedElement.previousElementSibling;
             if (!target) return;
-
             if (selectedElement.classList.contains('party-group')) {
                 target.before(selectedElement);
                 updatePartyLabels();
             } else if (selectedElement.classList.contains('player-row')) {
-                // Handle the rowspan cell when moving a player row to the top
                 const partyHeaderCell = target.querySelector('.party-header');
                 if (partyHeaderCell) {
                     target.removeChild(partyHeaderCell);
@@ -1748,21 +1481,16 @@
                 }
                 target.before(selectedElement);
             }
-            // Keep selection after move
             updateControls();
         }
-
         function moveDown() {
             if (!selectedElement || moveDownBtn.disabled) return;
-
             const target = selectedElement.nextElementSibling;
             if (!target) return;
-
             if (selectedElement.classList.contains('party-group')) {
                 target.after(selectedElement);
                 updatePartyLabels();
             } else if (selectedElement.classList.contains('player-row')) {
-                // Handle the rowspan cell when moving the top player row down
                 const partyHeaderCell = selectedElement.querySelector('.party-header');
                 if (partyHeaderCell) {
                     selectedElement.removeChild(partyHeaderCell);
@@ -1770,20 +1498,219 @@
                 }
                 target.after(selectedElement);
             }
-             // Keep selection after move
             updateControls();
         }
-
         function updatePartyLabels() {
             const partyGroups = document.querySelectorAll('#resultOutput .party-group');
             partyGroups.forEach((group, index) => {
                 const header = group.querySelector('.party-header');
-                if (header) {
-                    header.textContent = `${index + 1}파티`;
+                if (header) header.textContent = `${index + 1}파티`;
+            });
+        }
+    </script>
+    
+    <!-- NEW SCRIPT for Memo Pad -->
+    <script>
+    function initMemoPad() {
+        const container = document.getElementById('memo-pad-container');
+        if (!container) return;
+
+        const COLS = 6;
+        const ROWS = 12; // 12 editable rows
+        const fixedHeaders = ['닉네임', '모험단', '메인딜', '업둥이1', '업둥이2', '버퍼'];
+
+        let table = document.createElement('table');
+        table.className = 'memo-pad-table';
+
+        // Create Header Row in <thead>
+        let thead = table.createTHead();
+        let headerRow = thead.insertRow();
+        let corner = document.createElement('th');
+        corner.className = 'corner-header';
+        headerRow.appendChild(corner);
+        for (let i = 0; i < COLS; i++) {
+            let th = document.createElement('th');
+            th.textContent = fixedHeaders[i];
+            headerRow.appendChild(th);
+        }
+
+        // Create Body Rows
+        let tbody = table.createTBody();
+        for (let i = 0; i < ROWS; i++) {
+            let row = tbody.insertRow();
+            let rowHeader = document.createElement('th');
+            rowHeader.className = 'row-header';
+            rowHeader.textContent = i + 1;
+            row.appendChild(rowHeader);
+            for (let j = 0; j < COLS; j++) {
+                let cell = row.insertCell();
+                cell.dataset.row = i;
+                cell.dataset.col = j;
+                cell.contentEditable = true;
+                cell.className = 'data-cell';
+            }
+        }
+        container.appendChild(table);
+
+        let isSelecting = false;
+        let startCell = null;
+        let endCell = null;
+        const cells = Array.from(table.getElementsByClassName('data-cell'));
+
+        function clearSelection() {
+            cells.forEach(c => c.classList.remove('selected'));
+        }
+        
+        function selectRange(start, end) {
+            clearSelection();
+            if (!start || !end) return;
+            const minRow = Math.min(parseInt(start.dataset.row), parseInt(end.dataset.row));
+            const maxRow = Math.max(parseInt(start.dataset.row), parseInt(end.dataset.row));
+            const minCol = Math.min(parseInt(start.dataset.col), parseInt(end.dataset.col));
+            const maxCol = Math.max(parseInt(start.dataset.col), parseInt(end.dataset.col));
+
+            cells.forEach(cell => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                if (row >= minRow && row <= maxRow && col >= minCol && col <= maxCol) {
+                    cell.classList.add('selected');
                 }
             });
         }
 
+        table.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('data-cell')) {
+                isSelecting = true;
+                startCell = e.target;
+                endCell = e.target;
+                if (!e.shiftKey) {
+                    selectRange(startCell, endCell);
+                } else {
+                    const active = document.activeElement;
+                    if(active && active.classList.contains('data-cell')) {
+                         selectRange(active, endCell);
+                    }
+                }
+                // Do not prevent default to allow focus on click
+            }
+        });
+
+        table.addEventListener('mouseover', (e) => {
+            if (isSelecting && e.target.classList.contains('data-cell')) {
+                endCell = e.target;
+                selectRange(startCell, endCell);
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isSelecting = false;
+        });
+        
+        table.addEventListener('keydown', (e) => {
+            const activeCell = document.activeElement;
+            if (!activeCell || !activeCell.classList.contains('data-cell')) return;
+            
+            const row = parseInt(activeCell.dataset.row);
+            const col = parseInt(activeCell.dataset.col);
+
+            let nextCell = null;
+            if (e.key === 'Tab' && !e.shiftKey) {
+                e.preventDefault();
+                nextCell = table.querySelector(`[data-row='${row}'][data-col='${col + 1}']`) || table.querySelector(`[data-row='${row + 1}'][data-col='0']`);
+            } else if (e.key === 'Tab' && e.shiftKey) {
+                e.preventDefault();
+                nextCell = table.querySelector(`[data-row='${row}'][data-col='${col - 1}']`) || table.querySelector(`[data-row='${row - 1}'][data-col='${COLS - 1}']`);
+            } else if (e.key === 'Enter') {
+                 e.preventDefault();
+                 nextCell = table.querySelector(`[data-row='${row + 1}'][data-col='${col}']`);
+            } else if (e.key === 'ArrowUp') {
+                nextCell = table.querySelector(`[data-row='${row - 1}'][data-col='${col}']`);
+            } else if (e.key === 'ArrowDown') {
+                nextCell = table.querySelector(`[data-row='${row + 1}'][data-col='${col}']`);
+            } else if (e.key === 'ArrowLeft' && window.getSelection().anchorOffset === 0) {
+                nextCell = table.querySelector(`[data-row='${row}'][data-col='${col - 1}']`);
+            } else if (e.key === 'ArrowRight' && window.getSelection().anchorOffset === activeCell.textContent.length) {
+                nextCell = table.querySelector(`[data-row='${row}'][data-col='${col + 1}']`);
+            }
+
+            if (nextCell && nextCell.isContentEditable) {
+                e.preventDefault();
+                nextCell.focus();
+                selectRange(nextCell, nextCell);
+            }
+
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                const selected = table.querySelectorAll('.selected');
+                if (selected.length > 0) {
+                    e.preventDefault();
+                    selected.forEach(cell => {
+                        cell.textContent = '';
+                    });
+                    if(startCell) startCell.focus();
+                }
+            }
+        });
+
+        table.addEventListener('copy', (e) => {
+            const selected = table.querySelectorAll('.selected');
+            if (selected.length === 0) return;
+
+            e.preventDefault();
+
+            const selectionRect = {
+                minRow: Infinity, maxRow: -Infinity,
+                minCol: Infinity, maxCol: -Infinity
+            };
+
+            selected.forEach(cell => {
+                selectionRect.minRow = Math.min(selectionRect.minRow, parseInt(cell.dataset.row));
+                selectionRect.maxRow = Math.max(selectionRect.maxRow, parseInt(cell.dataset.row));
+                selectionRect.minCol = Math.min(selectionRect.minCol, parseInt(cell.dataset.col));
+                selectionRect.maxCol = Math.max(selectionRect.maxCol, parseInt(cell.dataset.col));
+            });
+
+            let copyString = '';
+            for (let i = selectionRect.minRow; i <= selectionRect.maxRow; i++) {
+                const rowData = [];
+                for (let j = selectionRect.minCol; j <= selectionRect.maxCol; j++) {
+                    const cell = table.querySelector(`[data-row='${i}'][data-col='${j}']`);
+                    rowData.push(cell ? cell.textContent : '');
+                }
+                copyString += rowData.join('\t');
+                if (i < selectionRect.maxRow) {
+                    copyString += '\n';
+                }
+            }
+
+            e.clipboardData.setData('text/plain', copyString);
+        });
+
+        table.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            const activeCell = document.activeElement;
+            if (!activeCell || !activeCell.classList.contains('data-cell')) return;
+
+            const startRow = parseInt(activeCell.dataset.row);
+            const startCol = parseInt(activeCell.dataset.col);
+
+            const rows = text.split(/\r?\n/).filter(r => r.length > 0);
+            rows.forEach((rowData, i) => {
+                const cellsData = rowData.split('\t');
+                cellsData.forEach((cellData, j) => {
+                    const targetRow = startRow + i;
+                    const targetCol = startCol + j;
+                    if (targetRow < ROWS && targetCol < COLS) {
+                        const targetCell = table.querySelector(`[data-row='${targetRow}'][data-col='${targetCol}']`);
+                        if (targetCell && targetCell.isContentEditable) {
+                            targetCell.textContent = cellData;
+                        }
+                    }
+                });
+            });
+        });
+    }
     </script>
 </body>
 </html>
+
