@@ -577,6 +577,7 @@
                             (모험단으로 동일 인물을 판별합니다.)<br><br>
                             데이터의 숫자 뒤의 괄호는 예외처리 되므로 계산에 포함되지 않습니다.<br>
                             (예:250(12.5) → 250으로 계산됨.)<br><br>
+                            * 업둥이1은 업둥이2보다 쌔거나 같지 않으면, 의도와 다르게 작동할 수 있습니다.<br><br>
                             *업둥버퍼: 파티 내 버프력이 가장 낮은 버퍼 (인식값 초과)
                         </span>
                     </span>
@@ -614,7 +615,7 @@
                          <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
                              <span class="tooltip-icon">?</span>
                              <span class="tooltip-text" style="width: 320px; margin-left: -160px;">
-                                 업둥이의 순서를 고정합니다.<br>정순:쌘 업둥이 먼저 배치 | 역순:약한 업둥이 먼저 배치
+                                 업둥이의 순서를 고정합니다.<br>정순:업둥이1 먼저 배치 | 역순:업둥이2 먼저 배치
                              </span>
                          </span>
                     </div>
@@ -721,6 +722,7 @@
                     </span>
                 </span>
             </h2>
+            <p style="font-size: 0.9em; color: var(--text-muted-color); margin-top: -15px; margin-bottom: 15px;">* 업둥이1은 업둥이2보다 쌔거나 같아야 합니다.</p>
             <div id="memo-pad-container"></div>
         </div>
     </div>
@@ -1739,7 +1741,7 @@
                 selectRange(nextCell, nextCell);
             }
 
-            if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (e.key === 'Delete') {
                 const selected = table.querySelectorAll('.selected');
                 if (selected.length > 0) {
                     e.preventDefault();
@@ -1747,6 +1749,18 @@
                         cell.textContent = '';
                     });
                     if(startCell) startCell.focus();
+                }
+            } else if (e.key === 'Backspace') {
+                const selected = table.querySelectorAll('.selected');
+                if (selected.length > 1) {
+                    e.preventDefault();
+                    selected.forEach(cell => {
+                        cell.textContent = '';
+                    });
+                    if(startCell) startCell.focus();
+                }
+                else if (window.getSelection().anchorOffset === 0 && activeCell.textContent === '') {
+                    e.preventDefault();
                 }
             }
         });
