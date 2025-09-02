@@ -596,7 +596,7 @@
                     <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
                         <span class="tooltip-icon">?</span>
                         <span class="tooltip-text" style="width: 320px; margin-left: -160px;">
-                            파티 내 플레이어 순서를 국룰대로 조합합니다.<br>(벞1234,딜4321)파티딜 최저점이 낮아질 수 있습니다.<br><br>정순:업둥이1 먼저 배치 | 역순:업둥이2 먼저 배치
+                            파티 내 플레이어 순서를 국룰대로 조합합니다.<br>(벞1234,딜4321)최적값이 아닐 수 있습니다.<br><br>정순:업둥이1 먼저 배치 | 역순:업둥이2 먼저 배치
                         </span>
                     </span>	
                 </div>
@@ -655,7 +655,7 @@
                     <span style="font-weight: 500; font-size: 1em; color: var(--text-color);">조합 방식:</span>
                     <div id="optimization-options" class="mode-selector" style="margin: 0; margin-bottom: 0;">
                         <input type="radio" id="strategyMaxMin" name="optimizationStrategy" value="maxMin" checked>
-                        <label for="strategyMaxMin">최저점</label>
+                        <label for="strategyMaxMin">최저값</label>
                     
                         <input type="radio" id="strategyMinStdDev" name="optimizationStrategy" value="minStdDev">
                         <label for="strategyMinStdDev">표준편차</label>
@@ -1796,3 +1796,4 @@
     </script>
 </body>
 </html>
+
