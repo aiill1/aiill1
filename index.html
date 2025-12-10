@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>공격대 파티 최적화 도구 (UI/파싱 개선판)</title>
+    <title>공격대 파티 최적화 도구 (UI/파싱/드래그앤드롭 수정판)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -384,7 +384,7 @@
             font-weight: 500;
         }
         
-        /* [REQUEST] Role Badge Styles */
+        /* Role Badge Styles */
         .role-badge {
             display: block;
             font-size: 10px;
@@ -702,14 +702,13 @@
                     <textarea id="excelData" placeholder="엑셀에서 '닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요. (딜러 순서 무관: 자동 정렬됨)"></textarea>
                     
                     <div class="input-group" style="margin-top: 20px;">
-                        <!-- [REQUEST] Default Checked -->
                         <input type="checkbox" id="standardParty" checked>
                         <label for="standardParty">국룰 파티 조합</label>
                         <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
                             <span class="tooltip-icon">?</span>
                             <span class="tooltip-text" style="width: 320px; margin-left: -160px;">
-                                파티 내 플레이어 순서를 국룰대로 조합합니다.<br>(벞1234,메인딜4321)<br>정순:업둥이1 먼저배치 | 역순:업둥이2 먼저배치<br>
-                                <strong>몰빵 분배 시 이 옵션은 인원 분배(스케줄) 기준으로 사용됩니다.</strong>
+                                파티 내 플레이어 순서를 국룰대로 조합합니다.<br>(벞1234,메인딜4321)<br>정순:쌘 업둥이 먼저 | 역순:약한 업둥이 먼저<br>
+                                <strong>몰빵 분배 시 이 옵션은 인원 분배 기준으로 사용합니다.</strong>
                             </span>
                         </span>	
                     </div>
@@ -723,7 +722,6 @@
                     </div>
 
                     <div class="input-group" style="margin-top: 15px;">
-                        <!-- [REQUEST] Default Unchecked -->
                         <input type="checkbox" id="useUpdoongBuffer">
                         <label for="useUpdoongBuffer">업둥버퍼 사용</label>
                     </div>
@@ -762,7 +760,6 @@
                             <input type="radio" id="strategyMaxMin" name="optimizationStrategy" value="maxMin">
                             <label for="strategyMaxMin">최저값/1파티평균</label>
                         
-                            <!-- [REQUEST] Default Checked -->
                             <input type="radio" id="strategyMinStdDev" name="optimizationStrategy" value="minStdDev" checked>
                             <label for="strategyMinStdDev">표준편차</label>
                         </div>
@@ -847,17 +844,12 @@
             return randomSquare;
         }
         
-        // [REQUEST] Parsing logic updated to handle 225(Text) or 225Text
         function parseValAndText(str) {
             str = String(str).trim();
-            // Match number at start, followed by anything else
             const match = str.match(/^(\d+)(.*)$/);
             if (match) {
                 let val = parseInt(match[1], 10);
                 let text = match[2].trim();
-                // If text starts with (, remove it from visualization if desired, or keep it.
-                // Request said "225뮤즈" -> "뮤즈". "250(넨마)" -> "(넨마)".
-                // Legacy "250(넨마)" handled by regex too.
                 return { val: val, text: text };
             }
             return { val: 0, text: '' };
@@ -883,7 +875,6 @@
 
                 if (isNaN(d1.val) || isNaN(d2.val) || isNaN(d3.val) || isNaN(buf.val)) throw new Error(`${index + 1}번째 줄 숫자가 올바르지 않습니다.`);
                 
-                // Sort dealers by value descending
                 const dealers = [d1, d2, d3].sort((a, b) => b.val - a.val);
 
                 if (uniqueGuilds.has(guild)) throw new Error(`동일한 모험단('${guild}')이 중복 존재합니다.`);
@@ -912,7 +903,7 @@
             for (let playerIndex = 0; playerIndex < 4; playerIndex++) {
                 const player = partyPlayers[playerIndex];
                 const role = charRoles[scheduleRow[playerIndex]];
-                const charData = player.chars[role]; // {val, text}
+                const charData = player.chars[role]; 
                 const originalValue = charData.val;
                 let displayValue = originalValue;
                 let roleClass = '';
@@ -947,7 +938,7 @@
             const dps = [];
             
             playersWithRoles.forEach(p => {
-                const charData = p.player.chars[p.role]; // {val, text}
+                const charData = p.player.chars[p.role]; 
                 if (p.role === '버퍼') {
                     buffers.push(p);
                 } else {
@@ -1742,7 +1733,7 @@
 
             const COLS = 6;
             const ROWS = 12; // 12 editable rows
-            const fixedHeaders = ['닉네임', '모험단', '메인딜', '업둥이1', '업둥이2', '버퍼'];
+            const fixedHeaders = ['닉네임', '모험단', '딜러1', '딜러2', '딜러3', '버퍼'];
 
             let table = document.createElement('table');
             table.className = 'memo-pad-table';
@@ -1802,6 +1793,43 @@
                     }
                 });
             }
+
+            // Add Drag and Drop Events
+            table.addEventListener('dragover', (e) => {
+                e.preventDefault(); // Necessary to allow dropping
+            });
+
+            table.addEventListener('drop', (e) => {
+                e.preventDefault();
+                // Get plain text data
+                const text = e.dataTransfer.getData('text/plain');
+                // The target element might be a cell or a child of a cell
+                let target = e.target;
+                if (!target.classList.contains('data-cell')) {
+                    // Try to find the closest cell if dropped on content inside
+                    target = target.closest('.data-cell');
+                }
+                
+                if (target && target.classList.contains('data-cell')) {
+                    const startRow = parseInt(target.dataset.row);
+                    const startCol = parseInt(target.dataset.col);
+                    
+                    const rows = text.split(/\r?\n/).filter(r => r.length > 0);
+                    rows.forEach((rowData, i) => {
+                        const cellsData = rowData.split('\t');
+                        cellsData.forEach((cellData, j) => {
+                            const targetRow = startRow + i;
+                            const targetCol = startCol + j;
+                            if (targetRow < ROWS && targetCol < COLS) {
+                                const targetCell = table.querySelector(`[data-row='${targetRow}'][data-col='${targetCol}']`);
+                                if (targetCell && targetCell.isContentEditable) {
+                                    targetCell.textContent = cellData;
+                                }
+                            }
+                        });
+                    });
+                }
+            });
 
             table.addEventListener('mousedown', (e) => {
                 if (e.target.classList.contains('data-cell')) {
