@@ -3,41 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>공격대 파티 최적화 도구</title>
+    <title>공격대 파티 최적화 도구 (가독성 개선판)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #f4f7f9;
+            /* Base Colors */
+            --bg-color: #f8f9fa;
             --card-bg-color: #ffffff;
-            --primary-color: #3d8bfd;
-            --primary-hover-color: #3478e1;
-            --text-color: #333333;
-            --text-muted-color: #777;
-            --border-color: #e0e0e0;
-            --header-bg: #f8f9fa;
-            --footer-bg: #f1f3f5;
-            --dps-bg: #ffebee;
-            --updoongie-bg: #e3f2fd;
+            --primary-color: #2c3e50;
+            --primary-hover-color: #1a252f;
+            --text-color: #2c3e50;
+            --text-muted-color: #7f8c8d;
+            --border-color: #e2e8f0;
+            --header-bg: #f1f5f9;
+            --footer-bg: #f8f9fa;
+            
+            /* * Improved Role Colors (Modern Pastel Palette) 
+             * 배경색(bg)은 연하게, 글자색(text)은 진하게 하여 가독성 확보
+             */
+            
+            /* 메인딜러: 강렬함, 중요함 -> Red/Rose */
+            --dps-bg: #ffebee; 
+            --dps-text: #c62828;
+            
+            /* 업둥이1: 서브 딜러 -> Blue */
+            --updoongie1-bg: #e3f2fd;
+            --updoongie1-text: #1565c0;
+            
+            /* 업둥이2: 하위 딜러 -> Grayish/Slate */
+            --updoongie2-bg: #eceff1;
+            --updoongie2-text: #546e7a;
+            
+            /* 버퍼: 지원, 안정 -> Green/Teal */
             --buffer-bg: #e8f5e9;
-            --selection-color: #dbeafe;
-            --selection-border-color: #3d8bfd;
+            --buffer-text: #2e7d32;
+            
+            --selection-color: #fff3cd; /* Highlight color for selections */
+            --selection-border-color: #ffc107;
+            
+            --shadow-subtle: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --radius-md: 8px;
+            --radius-sm: 4px;
         }
 
         body.dark-mode {
+            /* Dark Mode Palette */
             --bg-color: #121212;
             --card-bg-color: #1e1e1e;
+            --primary-color: #90caf9;
+            --primary-hover-color: #42a5f5;
             --text-color: #e0e0e0;
-            --text-muted-color: #888;
-            --border-color: #333;
-            --header-bg: #2a2a2a;
-            --footer-bg: #2c2c2c;
-            --dps-bg: #4a141c;
-            --updoongie-bg: #0d2c4a;
-            --buffer-bg: #133b1f;
-            --selection-color: #2a3b5c;
-            --selection-border-color: #5a9fff;
+            --text-muted-color: #a0a0a0;
+            --border-color: #333333;
+            --header-bg: #252525;
+            --footer-bg: #1e1e1e;
+            
+            /* Role Colors (Dark Mode - Desaturated for eye comfort) */
+            --dps-bg: #3e2723;       /* Dark Red-Brown */
+            --dps-text: #ffcdd2;     /* Light Red */
+            
+            --updoongie1-bg: #1a237e; /* Dark Blue */
+            --updoongie1-text: #bbdefb; /* Light Blue */
+            
+            --updoongie2-bg: #263238; /* Dark Slate */
+            --updoongie2-text: #b0bec5; /* Light Gray-Blue */
+            
+            --buffer-bg: #1b5e20;     /* Dark Green */
+            --buffer-text: #c8e6c9;   /* Light Green */
+            
+            --selection-color: #3e2723;
+            --selection-border-color: #ffb74d;
+            --shadow-subtle: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
         }
 
         body {
@@ -46,84 +84,118 @@
             color: var(--text-color);
             margin: 0;
             padding: 20px;
-            line-height: 1.7;
+            line-height: 1.6;
             transition: background-color 0.3s, color 0.3s;
+            letter-spacing: -0.025em;
         }
 
         .main-container {
-            max-width: 1400px;
-            margin: 20px auto;
-            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 10px;
         }
         
         header {
-            text-align: center;
-            margin-bottom: 40px;
-            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
         }
 
         h1 {
-            font-size: 2.5em;
-            font-weight: 700;
-            color: var(--primary-color);
+            font-size: 1.8em;
+            font-weight: 800;
+            color: var(--text-color);
+            margin: 0;
+            letter-spacing: -0.03em;
         }
         
         h2 {
-            font-size: 1.8em;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
+            font-size: 1.25em;
+            font-weight: 700;
+            margin: 0 0 20px 0;
             display: flex;
             align-items: center;
             gap: 10px;
+            border-left: 5px solid var(--primary-color);
+            padding-left: 15px;
+            line-height: 1.2;
+        }
+        
+        /* Layout Grid */
+        .content-wrapper {
+            display: grid;
+            grid-template-columns: 400px 1fr; /* Fixed Left, Fluid Right */
+            gap: 30px;
+            align-items: start;
+        }
+        
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
         }
 
-        h2 > span:first-child {
-             border-bottom: 2px solid var(--primary-color);
-             padding-bottom: 10px;
+        .card {
+            background-color: var(--card-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-subtle);
+            padding: 24px;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
-
+        
+        /* Tooltip */
         .tooltip-wrapper {
             position: relative;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding-bottom: 10px;
+            cursor: help;
         }
 
         .tooltip-icon {
-            width: 22px;
-            height: 22px;
-            background-color: var(--text-muted-color);
-            color: var(--card-bg-color);
+            width: 20px;
+            height: 20px;
+            background-color: transparent;
+            color: var(--text-muted-color);
+            border: 1.5px solid var(--text-muted-color);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 700;
-            cursor: help;
-            user-select: none;
+            transition: all 0.2s;
+        }
+        
+        .tooltip-wrapper:hover .tooltip-icon {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
         }
 
         .tooltip-text {
             visibility: hidden;
-            width: 360px;
+            width: 320px;
             background-color: #333;
             color: #fff;
             text-align: left;
-            border-radius: 6px;
-            padding: 10px 15px;
+            border-radius: var(--radius-sm);
+            padding: 12px;
             position: absolute;
-            z-index: 10;
-            bottom: 125%;
+            z-index: 100;
+            bottom: 140%;
             left: 50%;
-            margin-left: -180px;
+            transform: translateX(-50%);
             opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 14px;
-            line-height: 1.6;
+            transition: opacity 0.2s, bottom 0.2s;
+            font-size: 13px;
+            line-height: 1.5;
             font-weight: 400;
             pointer-events: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
 
         .tooltip-text::after {
@@ -131,592 +203,638 @@
             position: absolute;
             top: 100%;
             left: 50%;
-            margin-left: -5px;
-            border-width: 5px;
+            margin-left: -6px;
+            border-width: 6px;
             border-style: solid;
             border-color: #333 transparent transparent transparent;
         }
-        .tooltip-text pre {
-            background: #444;
-            padding: 8px;
-            border-radius: 4px;
-            color: #f0f0f0;
-            font-family: monospace;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-
+        
         .tooltip-wrapper:hover .tooltip-text {
             visibility: visible;
             opacity: 1;
+            bottom: 130%;
         }
 
-        body.dark-mode .tooltip-text {
-            background-color: #f0f0f0;
-            color: #333;
-        }
-        body.dark-mode .tooltip-text::after {
-            border-color: #f0f0f0 transparent transparent transparent;
-        }
-        body.dark-mode .tooltip-text pre {
-             background: #ddd;
-             color: #111;
-        }
-
-        .content-wrapper {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 40px;
-        }
-
-        .card {
-            background-color: var(--card-bg-color);
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            padding: 30px;
-            transition: background-color 0.3s;
-            position: relative;
-        }
-        
+        /* Forms */
         textarea {
             width: 100%;
-            height: 280px;
+            height: 300px;
             font-size: 14px;
+            font-family: 'Noto Sans KR', monospace;
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 12px;
+            border-radius: var(--radius-md);
+            padding: 16px;
             box-sizing: border-box;
             resize: vertical;
             background-color: var(--bg-color);
             color: var(--text-color);
-            transition: border-color 0.3s, background-color 0.3s;
+            transition: all 0.2s;
+            line-height: 1.6;
         }
         textarea:focus {
             outline: none;
             border-color: var(--primary-color);
+            background-color: var(--card-bg-color);
+            box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
         }
 
         label {
-            font-weight: 500;
-            font-size: 1.1em;
+            font-weight: 600;
+            font-size: 0.95em;
             display: block;
-            margin-top: 15px;
+            margin-top: 24px;
             margin-bottom: 8px;
+            color: var(--text-color);
         }
 
         input[type="number"], .input-group input[type="number"] {
-            width: 120px;
-            padding: 8px 12px;
+            width: 100%;
+            max-width: 140px;
+            padding: 10px 12px;
             font-size: 14px;
-            border-radius: 8px;
+            border-radius: var(--radius-sm);
             border: 1px solid var(--border-color);
             background-color: var(--bg-color);
             color: var(--text-color);
-            transition: border-color 0.3s, background-color 0.3s;
+            transition: all 0.2s;
         }
-        input[type="number"]:focus, .input-group input[type="number"]:focus {
+        input[type="number"]:focus {
             outline: none;
             border-color: var(--primary-color);
+            background-color: var(--card-bg-color);
         }
 
+        /* Buttons & Controls */
         button {
             width: 100%;
-            padding: 12px 20px;
+            padding: 16px 20px;
             font-size: 16px;
             font-weight: 700;
             cursor: pointer;
-            background: linear-gradient(45deg, var(--primary-color), #5a9fff);
-            color: white;
+            background-color: var(--primary-color);
+            color: #ffffff;
             border: none;
-            border-radius: 8px;
-            margin-top: 25px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 8px rgba(61, 139, 253, 0.3);
+            border-radius: var(--radius-md);
+            margin-top: 30px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         button:hover {
+            background-color: var(--primary-hover-color);
             transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(61, 139, 253, 0.4);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
         }
-        
-        #status {
-            margin-top: 20px;
-            font-weight: 500;
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .status-error { background-color: #ffebee; color: #c62828; }
-        .status-success { background-color: #e8f5e9; color: #2e7d32; }
-        .status-info { background-color: #e3f2fd; color: #1565c0; }
-        
-        #resultOutput table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-top: 20px;
-            font-size: 14px;
-            table-layout: fixed;
-        }
-        #resultOutput th, #resultOutput td {
-            border: 1px solid var(--border-color);
-            padding: 12px;
-            text-align: center;
-            font-weight: 500;
-            vertical-align: middle;
-            word-break: keep-all;
-        }
-        #resultOutput thead th {
-            background-color: var(--header-bg);
-            font-weight: 700;
-        }
-        
-        #resultOutput tbody .party-col, 
-        #resultOutput tbody .nickname-col,
-        #resultOutput tbody .guild-col {
-            font-weight: 700;
-            background-color: var(--header-bg);
-        }
-        
-        #resultOutput tbody .nickname-col,
-        #resultOutput tbody .guild-col {
-            text-align: left;
-            width: 120px;
-        }
-        
-        .role-dps { background-color: var(--dps-bg); }
-        .role-updoongie { background-color: var(--updoongie-bg); }
-        .role-buffer { background-color: var(--buffer-bg); }
-
-        .result-summary {
-            text-align: center;
-            font-size: 1.1em;
-            padding: 15px;
-            background-color: var(--header-bg);
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            margin-bottom: 20px;
-        }
-        
-        .party-synergy-row {
-            background-color: var(--footer-bg);
-        }
-        .party-synergy-row td {
-            font-weight: 700;
-        }
-        .party-synergy-row .synergy-label {
-            color: var(--primary-color);
+        body.dark-mode button {
+            color: #121212;
         }
 
-        footer {
-            text-align: center;
-            margin-top: 40px;
-            padding: 20px;
-            font-size: 0.9em;
-            color: var(--text-muted-color);
-        }
-
-        .theme-switch-wrapper {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            align-items: center;
-        }
-        .theme-label {
-            margin-right: 10px;
-            font-size: 0.9em;
-            font-weight: 500;
-        }
-        .theme-switch {
-            display: inline-block;
-            height: 34px;
-            position: relative;
-            width: 60px;
-        }
-        .theme-switch input {
-            display:none;
-        }
-        .slider {
-            background-color: #ccc;
-            bottom: 0;
-            cursor: pointer;
-            left: 0;
-            position: absolute;
-            right: 0;
-            top: 0;
-            transition: .4s;
-        }
-        .slider:before {
-            background-color: #fff;
-            bottom: 4px;
-            content: "";
-            height: 26px;
-            left: 4px;
-            position: absolute;
-            transition: .4s;
-            width: 26px;
-        }
-        input:checked + .slider {
-            background-color: var(--primary-color);
-        }
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-        .slider.round {
-            border-radius: 34px;
-        }
-        .slider.round:before {
-            border-radius: 50%;
-        }
-
+        /* Radio & Checkbox Styling (Custom) */
         .mode-selector {
             display: flex;
-            justify-content: center;
             gap: 10px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }
         .mode-selector label {
+            margin: 0;
             cursor: pointer;
-            padding: 8px 16px;
+            padding: 10px 20px;
+            font-size: 14px;
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            transition: background-color 0.3s, border-color 0.3s;
+            background-color: var(--bg-color);
+            color: var(--text-muted-color);
+            border-radius: 50px; /* Pill shape */
+            transition: all 0.2s;
+            font-weight: 500;
         }
         .mode-selector input[type="radio"] {
             display: none;
         }
         .mode-selector input[type="radio"]:checked + label {
             background-color: var(--primary-color);
-            color: white;
+            color: #ffffff;
             border-color: var(--primary-color);
+            font-weight: 700;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        body.dark-mode .mode-selector input[type="radio"]:checked + label {
+            color: #121212;
         }
 
         .input-group {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-top: 15px;
-            margin-bottom: 8px;
+            margin-top: 16px;
+            margin-bottom: 10px;
         }
         .input-group label {
             margin: 0;
             cursor: pointer;
+            font-weight: 500;
         }
         .input-group input[type="checkbox"] {
             margin: 0;
-            width: 1.1em;
-            height: 1.1em;
+            accent-color: var(--primary-color);
             cursor: pointer;
-        }
-        .hidden {
-            display: none !important;
-        }
-
-        #ordering-controls {
-            display: flex;
-            justify-content: flex-end;
-            flex-direction: row;
-            gap: 10px;
-            margin-top: 20px;
+            width: 18px;
+            height: 18px;
         }
 
-        #ordering-controls button {
-            width: auto;
-            height: auto;
-            padding: 8px 16px;
+        /* Status & Results */
+        #status {
+            margin-top: 24px;
+            font-size: 0.95em;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            text-align: center;
+            border: 1px solid transparent;
+            font-weight: 500;
+        }
+        .status-error { background-color: #fef2f2; color: #dc2626; border-color: #fecaca !important; }
+        .status-success { background-color: #f0fdf4; color: #16a34a; border-color: #bbf7d0 !important; }
+        .status-info { background-color: #f8fafc; color: #475569; border-color: #e2e8f0 !important; }
+        
+        body.dark-mode .status-error { background-color: #451a1a; color: #ef9a9a; border-color: #7f1d1d !important; }
+        body.dark-mode .status-success { background-color: #143320; color: #a5d6a7; border-color: #1b5e20 !important; }
+        body.dark-mode .status-info { background-color: #2a2a2a; color: #b0b0b0; border-color: #444 !important; }
+
+        /* Tables (Result & Memo) */
+        table {
+            border-collapse: separate; /* Changed for border-radius on cells if needed, but spacing 0 usually */
+            border-spacing: 0;
+            width: 100%;
             font-size: 14px;
-            line-height: 1.5;
-            margin-top: 0;
+            table-layout: fixed;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+        th, td {
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            padding: 12px 8px;
+            text-align: center;
+            vertical-align: middle;
+            color: var(--text-color);
+        }
+        th:last-child, td:last-child {
+            border-right: none;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        thead th {
+            background-color: var(--header-bg);
+            font-weight: 700;
+            color: var(--text-color);
+            padding: 14px 8px;
+        }
+        
+        /* Result Table Specifics */
+        #resultOutput table { margin-top: 0; }
+        
+        #resultOutput tbody .party-col {
+            font-weight: 700;
+            background-color: var(--header-bg);
+            color: var(--text-color);
+            border-right: 2px solid var(--border-color); /* Separator */
+        }
+        #resultOutput tbody .nickname-col,
+        #resultOutput tbody .guild-col {
+            text-align: left;
+            padding-left: 16px;
+            font-weight: 500;
+        }
+        
+        /* * Improved Role Cell Styles 
+         * Background color + Text color for readability
+         */
+        .role-dps { 
+            background-color: var(--dps-bg); 
+            color: var(--dps-text);
+            font-weight: 700; 
+        }
+        .role-updoongie1 { 
+            background-color: var(--updoongie1-bg); 
+            color: var(--updoongie1-text);
+            font-weight: 600; 
+        }
+        .role-updoongie2 { 
+            background-color: var(--updoongie2-bg); 
+            color: var(--updoongie2-text);
+            font-weight: 500;
+        }
+        .role-buffer { 
+            background-color: var(--buffer-bg); 
+            color: var(--buffer-text);
+            font-weight: 700;
+        }
+
+        .result-summary {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
-        }
-        #ordering-controls button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        tbody.party-group.selected {
-            outline: 3px solid var(--primary-color);
-            outline-offset: -2px;
-        }
-        tr.player-row.selected td {
-            background-color: rgba(61, 139, 253, 0.1) !important;
-            border-top: 2px solid var(--primary-color);
-            border-bottom: 2px solid var(--primary-color);
-        }
-        tr.player-row.selected td:first-of-type {
-            border-left: 2px solid var(--primary-color);
-        }
-        tr.player-row.selected td:last-of-type {
-            border-right: 2px solid var(--primary-color);
-        }
-        
-        #resultOutput .party-header, #resultOutput .player-row {
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        #resultOutput .party-header:hover, #resultOutput .player-row:hover {
-            background-color: rgba(61, 139, 253, 0.1);
-        }
-
-        .spinner {
-            border: 6px solid var(--bg-color);
-            border-top: 6px solid var(--primary-color);
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 40px auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        @media (max-width: 1200px) {
-            .content-wrapper {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* --- 메모장 (Memo Pad) Styles --- */
-        #memo-pad-container {
-            position: relative;
-        }
-
-        .memo-pad-table {
-            border-collapse: collapse;
-            table-layout: fixed;
-            font-size: 14px;
-            user-select: none;
-            width: 100%;
-        }
-
-        .memo-pad-table th, .memo-pad-table td {
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 0.95em;
+            padding: 18px;
+            background-color: var(--bg-color);
             border: 1px solid var(--border-color);
-            padding: 8px;
-            min-width: 100px;
-            height: 20px;
-            text-align: left;
+            border-radius: var(--radius-md);
+            margin-bottom: 24px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+        
+        .result-summary span strong {
+            color: var(--primary-color);
+        }
+
+        .party-synergy-row {
+            background-color: var(--header-bg);
+            border-top: 2px solid var(--border-color);
+        }
+        .party-synergy-row td {
+            font-weight: 800;
+            font-size: 1em;
+            padding-top: 14px;
+            padding-bottom: 14px;
+        }
+        .party-synergy-row .synergy-label {
+            color: var(--text-muted-color);
+            font-weight: 600;
+        }
+
+        /* Memo Pad Specifics */
+        #memo-pad-container {
+            overflow-x: auto;
+        }
+        .memo-pad-table {
+            font-size: 13px;
+        }
+        .memo-pad-table th, .memo-pad-table td {
+            height: 32px;
+            padding: 4px 8px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
-
-        .memo-pad-table thead th { /* Changed selector */
+        .memo-pad-table thead th {
             background-color: var(--header-bg);
-            font-weight: bold;
-            text-align: center;
             position: sticky;
             top: 0;
             z-index: 2;
         }
-        
         .memo-pad-table .row-header {
-             background-color: var(--header-bg);
-             font-weight: bold;
+             background-color: var(--bg-color);
+             font-weight: normal;
+             color: var(--text-muted-color);
+             width: 40px;
              text-align: center;
-             position: sticky;
-             left: 0;
-             z-index: 1;
         }
-        
-        .memo-pad-table .corner-header {
-            position: sticky;
-            top: 0;
-            left: 0;
-            z-index: 3;
-        }
-
         .memo-pad-table .data-cell {
-            cursor: cell;
+            background-color: var(--card-bg-color);
+        }
+        .memo-pad-table .data-cell:focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: -2px;
+            z-index: 10;
+        }
+        .memo-pad-table .selected {
+            background-color: var(--selection-color) !important;
+            color: var(--text-color);
+        }
+
+        /* Utilities */
+        .hidden { display: none !important; }
+        
+        .theme-switch-wrapper {
+            display: flex;
+            align-items: center;
+        }
+        .theme-label {
+            margin-right: 12px;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: var(--text-muted-color);
         }
         
-        .memo-pad-table .data-cell:focus {
-            outline: 2px solid var(--selection-border-color);
-            outline-offset: -2px;
+        /* Toggle Switch (Minimal) */
+        .theme-switch {
+            display: inline-block;
+            height: 26px;
+            position: relative;
+            width: 48px;
+        }
+        .theme-switch input { display:none; }
+        .slider {
+            background-color: #cbd5e1;
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transition: .3s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            background-color: #fff;
+            bottom: 4px;
+            content: "";
+            height: 18px;
+            left: 4px;
+            position: absolute;
+            transition: .3s;
+            width: 18px;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider { background-color: var(--primary-color); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        /* Ordering Controls */
+        #ordering-controls {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        #ordering-controls button {
+            width: auto;
+            padding: 8px 16px;
+            font-size: 13px;
+            margin-top: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            box-shadow: none;
+            border-radius: var(--radius-sm);
+        }
+        #ordering-controls button:hover {
+            background-color: var(--border-color);
+            transform: none;
+        }
+        #ordering-controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
-        .memo-pad-table .selected {
-            background-color: var(--selection-color);
+        /* Spinner */
+        .spinner {
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 0.8s linear infinite;
+            margin: 40px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Responsive */
+        @media (max-width: 1000px) {
+            .content-wrapper { grid-template-columns: 1fr; }
+            textarea { height: 200px; }
         }
 
+        /* Selection highlight */
+        tbody.party-group.selected {
+            box-shadow: 0 0 0 2px var(--primary-color) inset;
+        }
+        tr.player-row.selected td {
+            background-color: var(--selection-color) !important;
+        }
+        
+        #resultOutput .party-header, #resultOutput .player-row {
+            cursor: pointer;
+        }
+        #resultOutput .party-header:hover, #resultOutput .player-row:hover {
+            background-color: rgba(0,0,0,0.02);
+        }
+
+        /* Scrollbar styling for textarea/tables */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        body.dark-mode ::-webkit-scrollbar-thumb { background: #555; }
+        body.dark-mode ::-webkit-scrollbar-thumb:hover { background: #777; }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 30px;
+            font-size: 0.9em;
+            color: var(--text-muted-color);
+            border-top: 1px solid var(--border-color);
+        }
+        
+        /* Legend for Colors */
+        .color-legend {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            font-size: 0.85em;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .legend-box {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
 
     <div class="main-container">
         <header>
+            <h1>공격대 파티 최적화 도구</h1>
              <div class="theme-switch-wrapper">
-                 <span class="theme-label">다크 모드</span>
+                 <span class="theme-label">Dark Mode</span>
                  <label class="theme-switch" for="darkModeToggle">
                      <input type="checkbox" id="darkModeToggle" />
-                     <div class="slider round"></div>
+                     <div class="slider"></div>
                  </label>
              </div>
-            <h1>공격대 파티 최적화 도구</h1>
         </header>
 
         <div class="content-wrapper">
-            <div class="card">
-                <h2>
-                    <span>데이터 입력</span>
-                    <span class="tooltip-wrapper">
-                        <span class="tooltip-icon">?</span>
-                        <span class="tooltip-text">
-                            닉네임과 모험단은 띄어쓰기 없이 붙여서 입력하세요.<br><br>
-                            데이터의 숫자 뒤의 괄호는 예외처리 되므로 계산에 포함되지 않습니다.<br>
-                            (예:250(넨마) → 250으로 인식됨.)<br><br>
-                            '업둥이1'은 '업둥이2'보다 쌔거나 같지 않으면, 의도와 다르게 작동할 수 있습니다.<br>(모험단으로 동일인물을 판단하므로 닉네임은 중복가능합니다.)
-                        </span>
-                    </span>
-                </h2>
-                
-                <div class="mode-selector">
-                    <input type="radio" id="mode12" name="mode" value="12" checked>
-                    <label for="mode12">12인 공대</label>
-
-                    <input type="radio" id="mode8" name="mode" value="8">
-                    <label for="mode8">8인 공대</label>
-                    
-                    <input type="radio" id="mode4" name="mode" value="4">
-                    <label for="mode4">4인 공대</label>
-                </div>
-
-                <label for="excelData">엑셀 데이터 붙여넣기</label>
-                <textarea id="excelData" placeholder="엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요."></textarea>
-                
-                <div class="input-group" style="margin-top: 20px;">
-                    <input type="checkbox" id="standardParty">
-                    <label for="standardParty">국룰 파티 조합</label>
-                    <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
-                        <span class="tooltip-icon">?</span>
-                        <span class="tooltip-text" style="width: 320px; margin-left: -160px;">
-                            파티 내 플레이어 순서를 국룰대로 조합합니다.<br>(벞1234,메인딜4321)<br>정순:업둥이1 먼저배치 | 역순:업둥이2 먼저배치<br>정순은 쌘 업둥이부터, 역순은 약한 업둥이부터 오라고 하면 편리함.
-                        </span>
-                    </span>	
-                </div>
-                
-                <!-- START: MODIFIED SECTION -->
-                <div id="updoongiePlacementContainer" class="mode-selector hidden" style="justify-content: flex-start; padding-left: 25px; margin-top: 10px;">
-                    <input type="radio" id="placement1" name="updoongiePlacement" value="1" checked>
-                    <label for="placement1">정순</label>
-
-                    <input type="radio" id="placement2" name="updoongiePlacement" value="2">
-                    <label for="placement2">역순</label>
-                </div>
-                <!-- END: MODIFIED SECTION -->
-
-                <div class="input-group" style="margin-top: 15px;">
-                    <input type="checkbox" id="useUpdoongBuffer" checked>
-                    <label for="useUpdoongBuffer">업둥버퍼 사용</label>
-                </div>
-
-                <div id="updoongBufferOptions">
-                    <div style="margin-top: 15px; margin-bottom: 8px;">
-                        <label for="updoongieThreshold" style="display: inline; margin: 0;">업둥버퍼 인식값</label>
-                        <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
-                            <span class="tooltip-icon">?</span>
-                            <span class="tooltip-text" style="width: 290px; margin-left: -145px;">
-                                해당 수치보다 높으면 딜러가 아닌 업둥버퍼로 인식합니다.<br>
-                                (딜러보다 높아야하며, 업둥버퍼보다 낮아야합니다.)
-                            </span>
-                        </span>
-                    </div>
-                    <input type="number" id="updoongieThreshold" value="200">
-
-                    <label style="margin-top: 20px;">업둥버퍼 딜러 치환 방식</label>
-                    <div class="mode-selector" style="justify-content: flex-start;">
-                        <input type="radio" id="useFixedValue" name="updoongieConversionMethod" value="fixed" checked>
-                        <label for="useFixedValue">고정값</label>
-
-                        <input type="radio" id="useRatioValue" name="updoongieConversionMethod" value="ratio">
-                        <label for="useRatioValue">버프력 비례</label>
-                    </div>
-
-                    <div id="updoongieCapInputContainer">
-                        <label for="updoongieCap">치환값(모든 업둥버퍼는 해당값으로 치환됩니다)</label>
-                        <input type="number" id="updoongieCap" value="15">
-                    </div>
-
-                    <div id="updoongieMultiplierInputContainer" class="hidden">
-                        <label for="updoongieBufferMultiplier">버프력 비례 배율(예: 0.05)</label>
-                        <input type="number" id="updoongieBufferMultiplier" value="0.05" step="0.01">
-                    </div>
-                </div>
-
-                <button onclick="generateTeams()">최적 조합 생성</button>
-                <!-- START: Optimization Strategy Selector -->
-                <div style="display: flex; align-items: center; justify-content: center; margin-top: 15px; margin-bottom: 0; gap: 10px;">
-                    <span style="font-weight: 500; font-size: 1em; color: var(--text-color);">조합 방식:</span>
-                    <div id="optimization-options" class="mode-selector" style="margin: 0; margin-bottom: 0;">
-                        <input type="radio" id="strategyMaxMin" name="optimizationStrategy" value="maxMin" checked>
-                        <label for="strategyMaxMin">최저값</label>
-                    
-                        <input type="radio" id="strategyMinStdDev" name="optimizationStrategy" value="minStdDev">
-                        <label for="strategyMinStdDev">표준편차</label>
-                    </div>
-                </div>
-                <!-- END: Optimization Strategy Selector -->
-                <div id="status"></div>
-            </div>
-
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <!-- Left Panel: Input -->
+            <div class="left-panel">
+                <div class="card">
                     <h2>
-                        <span>생성 결과</span>
+                        <span>데이터 입력</span>
                         <span class="tooltip-wrapper">
                             <span class="tooltip-icon">?</span>
-                            <span class="tooltip-text" style="width: 320px; margin-left: -168px;">
-                                파티원 혹은 파티를 클릭하여 위아래 순서를 바꿀 수 있습니다.<br>
-                                (단순 정리용이며, 조합이 변경되지는 않습니다.)
+                            <span class="tooltip-text">
+                                닉네임과 모험단은 띄어쓰기 없이 붙여서 입력하세요.<br><br>
+                                데이터의 숫자 뒤의 괄호는 예외처리 되므로 계산에 포함되지 않습니다.<br>
+                                (예:250(넨마) → 250으로 인식됨.)<br><br>
+                                * 딜러 수치 입력 순서와 상관없이, 자동으로 높은 수치부터 메인딜, 업둥이1, 업둥이2로 지정됩니다.
                             </span>
                         </span>
                     </h2>
-                    <button id="copyButton" onclick="copyResultsToClipboard()" style="width: auto; padding: 8px 16px; font-size: 14px; margin-top: 0; display: none;">클립보드에 복사</button>
+                    
+                    <div class="mode-selector">
+                        <input type="radio" id="mode12" name="mode" value="12" checked>
+                        <label for="mode12">12인 공대</label>
+
+                        <input type="radio" id="mode8" name="mode" value="8">
+                        <label for="mode8">8인 공대</label>
+                        
+                        <input type="radio" id="mode4" name="mode" value="4">
+                        <label for="mode4">4인 공대</label>
+                    </div>
+
+                    <label for="excelData">엑셀 데이터 붙여넣기</label>
+                    <textarea id="excelData" placeholder="엑셀에서 '닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요. (딜러 순서 무관: 자동 정렬됨)"></textarea>
+                    
+                    <div class="input-group" style="margin-top: 20px;">
+                        <input type="checkbox" id="standardParty">
+                        <label for="standardParty">국룰 파티 조합</label>
+                        <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text" style="width: 320px; margin-left: -160px;">
+                                파티 내 플레이어 순서를 국룰대로 조합합니다.<br>(벞1234,메인딜4321)<br>정순:업둥이1 먼저배치 | 역순:업둥이2 먼저배치<br>정순은 쌘 업둥이부터, 역순은 약한 업둥이부터 오라고 하면 편리함.
+                            </span>
+                        </span>	
+                    </div>
+                    
+                    <div id="updoongiePlacementContainer" class="mode-selector hidden" style="justify-content: flex-start; padding-left: 25px; margin-top: 10px; margin-bottom: 0;">
+                        <input type="radio" id="placement1" name="updoongiePlacement" value="1" checked>
+                        <label for="placement1">정순</label>
+
+                        <input type="radio" id="placement2" name="updoongiePlacement" value="2">
+                        <label for="placement2">역순</label>
+                    </div>
+
+                    <div class="input-group" style="margin-top: 15px;">
+                        <input type="checkbox" id="useUpdoongBuffer" checked>
+                        <label for="useUpdoongBuffer">업둥버퍼 사용</label>
+                    </div>
+
+                    <div id="updoongBufferOptions">
+                        <div style="margin-top: 15px; margin-bottom: 8px;">
+                            <label for="updoongieThreshold" style="display: inline; margin: 0; font-size: 0.9em;">업둥버퍼 인식값</label>
+                            <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text" style="width: 290px; margin-left: -145px;">
+                                    해당 수치보다 높으면 딜러가 아닌 업둥버퍼로 인식합니다.<br>
+                                    (딜러보다 높아야하며, 업둥버퍼보다 낮아야합니다.)
+                                </span>
+                            </span>
+                        </div>
+                        <input type="number" id="updoongieThreshold" value="200">
+
+                        <label style="margin-top: 20px; font-size: 0.9em;">업둥버퍼 딜러 치환 방식</label>
+                        <div class="mode-selector" style="justify-content: flex-start;">
+                            <input type="radio" id="useFixedValue" name="updoongieConversionMethod" value="fixed" checked>
+                            <label for="useFixedValue">고정값</label>
+
+                            <input type="radio" id="useRatioValue" name="updoongieConversionMethod" value="ratio">
+                            <label for="useRatioValue">버프력 비례</label>
+                        </div>
+
+                        <div id="updoongieCapInputContainer">
+                            <label for="updoongieCap" style="font-size: 0.9em;">치환값 (고정값)</label>
+                            <input type="number" id="updoongieCap" value="15">
+                        </div>
+
+                        <div id="updoongieMultiplierInputContainer" class="hidden">
+                            <label for="updoongieBufferMultiplier" style="font-size: 0.9em;">버프력 비례 배율 (예: 0.05)</label>
+                            <input type="number" id="updoongieBufferMultiplier" value="0.05" step="0.01">
+                        </div>
+                    </div>
+
+                    <button onclick="generateTeams()">최적 조합 생성</button>
+                    
+                    <div style="display: flex; align-items: center; justify-content: center; margin-top: 20px; gap: 10px;">
+                        <span style="font-weight: 500; font-size: 0.9em; color: var(--text-muted-color);">조합 방식:</span>
+                        <div id="optimization-options" class="mode-selector" style="margin: 0;">
+                            <input type="radio" id="strategyMaxMin" name="optimizationStrategy" value="maxMin" checked>
+                            <label for="strategyMaxMin">최저값</label>
+                        
+                            <input type="radio" id="strategyMinStdDev" name="optimizationStrategy" value="minStdDev">
+                            <label for="strategyMinStdDev">표준편차</label>
+                        </div>
+                    </div>
+                    
+                    <div id="status"></div>
                 </div>
-                <div id="resultOutput">
+            </div>
+
+            <!-- Right Panel: Results & Memo -->
+            <div class="right-panel">
+                <!-- Result Card -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                        <h2>
+                            <span>생성 결과</span>
+                            <span class="tooltip-wrapper">
+                                <span class="tooltip-icon">?</span>
+                                <span class="tooltip-text" style="width: 320px; margin-left: -168px;">
+                                    파티원 혹은 파티를 클릭하여 위아래 순서를 바꿀 수 있습니다.<br>
+                                    (단순 정리용이며, 조합이 변경되지는 않습니다.)
+                                </span>
+                            </span>
+                        </h2>
+                        <button id="copyButton" onclick="copyResultsToClipboard()" style="width: auto; padding: 8px 16px; font-size: 13px; margin-top: 0; display: none; background-color: var(--primary-color); color: #fff;">결과 복사</button>
+                    </div>
+                    
+                    <div class="color-legend">
+                        <div class="legend-item"><div class="legend-box" style="background:var(--dps-bg);"></div><span>메인딜</span></div>
+                        <div class="legend-item"><div class="legend-box" style="background:var(--updoongie1-bg);"></div><span>업둥이1</span></div>
+                        <div class="legend-item"><div class="legend-box" style="background:var(--updoongie2-bg);"></div><span>업둥이2</span></div>
+                        <div class="legend-item"><div class="legend-box" style="background:var(--buffer-bg);"></div><span>버퍼</span></div>
+                    </div>
+
+                    <div id="resultOutput">
+                        <div style="text-align: center; color: var(--text-muted-color); padding: 40px; border: 2px dashed var(--border-color); border-radius: var(--radius-md);">데이터를 입력하고 '최적 조합 생성'을 눌러주세요.</div>
+                    </div>
+                    <div id="ordering-controls" class="hidden">
+                        <button id="moveUpBtn" title="위로 이동">▲ 위로</button>
+                        <button id="moveDownBtn" title="아래로 이동">▼ 아래로</button>
+                    </div>
                 </div>
-                <div id="ordering-controls" class="hidden">
-                    <button id="moveUpBtn" title="위로 이동">▲ 위로 이동</button>
-                    <button id="moveDownBtn" title="아래로 이동">▼ 아래로 이동</button>
+
+                <!-- Memo Pad Card -->
+                <div class="card">
+                    <h2>
+                        <span>메모장</span>
+                        <span class="tooltip-wrapper">
+                            <span class="tooltip-icon">?</span>
+                            <span class="tooltip-text" style="width: 380px; margin-left: -190px;">
+                                <b>엑셀 데이터 예시:</b><br>
+                                아래와 같은 형식의 6개 열 데이터를 복사하여 위 '데이터 입력' 창에 붙여넣을 수 있습니다.
+                                <pre>닉네임	모험단	메인딜	업둥이1	업둥이2	버퍼
+엘디르	모험단A	100	0	0	440
+아니마	모험단B	60	30	10	510</pre>
+                            </span>
+                        </span>
+                    </h2>
+                    <p style="font-size: 0.85em; color: var(--text-muted-color); margin-top: -10px; margin-bottom: 15px;">* 메모장이나 엑셀 입력 시 딜러 수치 순서는 무관합니다. (자동으로 높은 값이 메인딜로 배정됨)</p>
+                    <div id="memo-pad-container"></div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- MODIFIED SECTION: Memo Pad -->
-    <div class="main-container" style="padding-top: 0; margin-top: 0;">
-        <div class="card">
-            <h2>
-                <span>메모장</span>
-                <span class="tooltip-wrapper">
-                    <span class="tooltip-icon">?</span>
-                    <span class="tooltip-text" style="width: 380px; margin-left: -190px;">
-                        <b>엑셀 데이터 예시:</b><br>
-                        아래와 같은 형식의 6개 열 데이터를 복사하여 위 '데이터 입력' 창에 붙여넣을 수 있습니다.
-                        <pre>닉네임	모험단	메인딜	업둥이1	업둥이2	버퍼
-엘디르	모험단A	100	0	0	440
-아니마	모험단B	60	30	10	510</pre>
-                    </span>
-                </span>
-            </h2>
-            <p style="font-size: 0.9em; color: var(--text-muted-color); margin-top: -15px; margin-bottom: 15px;">'업둥이1'이 '업둥이2'보다 쌔거나 같지 않으면 의도와 달라질 수 있습니다. (모험단으로 동일인물을 판단하므로 닉네임은 중복가능합니다.)</p>
-            <div id="memo-pad-container"></div>
-        </div>
-    </div>
-    <!-- END MODIFIED SECTION -->
 
     <footer>
         <p>&copy; 2025 카인/미제레. All rights reserved.</p>
     </footer>
 
+    <!-- Script Section (Functionality Unchanged) -->
     <script>
-        // --- Original script from the file... (omitted for brevity, but it's all here)
         // Helper Functions
         function shuffle(array) {
             for (let i = array.length - 1; i > 0; i--) {
@@ -758,18 +876,27 @@
                 const cleanedLine = line.trim().replace(/\s+/g, '\t');
                 const parts = cleanedLine.split('\t');
                 if (parts.length !== 6) {
-                    throw new Error(`${index + 1}번째 줄의 형식이 올바르지 않습니다. 6개의 열(닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼)이 필요합니다.`);
+                    throw new Error(`${index + 1}번째 줄의 형식이 올바르지 않습니다. 6개의 열(닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼)이 필요합니다.`);
                 }
                 const nickname = parts[0];
                 const guild = parts[1];
-                const mainDps = parseInt(String(parts[2]).split('(')[0], 10);
-                const updoongie1 = parseInt(String(parts[3]).split('(')[0], 10);
-                const updoongie2 = parseInt(String(parts[4]).split('(')[0], 10);
+                
+                // 3, 4, 5번째 열 값을 가져와서 임시 저장
+                const val1 = parseInt(String(parts[2]).split('(')[0], 10);
+                const val2 = parseInt(String(parts[3]).split('(')[0], 10);
+                const val3 = parseInt(String(parts[4]).split('(')[0], 10);
                 const bufferPower = parseInt(String(parts[5]).split('(')[0], 10);
 
-                if ([mainDps, updoongie1, updoongie2, bufferPower].some(isNaN)) {
+                if ([val1, val2, val3, bufferPower].some(isNaN)) {
                     throw new Error(`${index + 1}번째 줄('${nickname}')에 숫자로 변환할 수 없는 값이 있습니다.`);
                 }
+
+                // 딜러 수치 내림차순 정렬 (높은 순서대로 메인딜, 업둥이1, 업둥이2 할당)
+                const dpsValues = [val1, val2, val3].sort((a, b) => b - a);
+                const mainDps = dpsValues[0];
+                const updoongie1 = dpsValues[1];
+                const updoongie2 = dpsValues[2];
+
                 if (uniqueGuilds.has(guild)) {
                     throw new Error(`동일한 모험단('${guild}')이 ${index + 1}번째 줄에 중복으로 존재합니다. 모험단은 고유해야 합니다.`);
                 }
@@ -802,12 +929,22 @@
                 let displayValue = originalValue;
                 let roleClass = '';
                 let isModified = false;
+                
+                // --- Color Change Logic ---
                 if (role === '버퍼') {
                     roleClass = 'role-buffer';
                     bufferPower = originalValue;
                     displayValue = originalValue;
                 } else {
-                    roleClass = (role === '딜러') ? 'role-dps' : 'role-updoongie';
+                    // role is '딜러', '업둥이1', or '업둥이2'
+                    if (role === '딜러') {
+                        roleClass = 'role-dps';
+                    } else if (role === '업둥이1') {
+                        roleClass = 'role-updoongie1';
+                    } else {
+                        roleClass = 'role-updoongie2';
+                    }
+
                     let dpsContribution = originalValue;
                     if (useUpdoongBuffer && originalValue > updoongieThreshold) {
                         isModified = true;
@@ -816,6 +953,7 @@
                     totalDps += dpsContribution;
                     displayValue = dpsContribution;
                 }
+                
                 processedPlayers.push({
                     player: player,
                     role: role,
@@ -1297,10 +1435,10 @@
                 placementLabel = `<strong>순서: <span style="color: var(--primary-color);">${placementText}</span></strong> &nbsp; | &nbsp; `;
             }
             let tableHtml = `<div class="result-summary">
-                    ${placementLabel}<strong>딜*버프력 분포 &nbsp; | &nbsp; 최저:</strong> ${stats.min.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
-                    <strong>평균:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} | 
-                    <strong>최고:</strong> ${stats.max.toLocaleString('ko-KR', { maximumFractionDigits: 0 })} |
-                    <strong>표준편차:</strong> ${stats.stdDev.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}
+                    ${placementLabel}<span><strong>딜*버프력 분포 &nbsp; | &nbsp; 최저:</strong> ${stats.min.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}</span>
+                    <span><strong>평균:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}</span> 
+                    <span><strong>최고:</strong> ${stats.max.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}</span>
+                    <span><strong>표준편차:</strong> ${stats.stdDev.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}</span>
                 </div><table><thead><tr>
                             <th>파티</th><th class="nickname-col">닉네임</th><th class="guild-col">모험단</th>
                             <th>1공대</th><th>2공대</th><th>3공대</th><th>4공대</th>
@@ -1318,7 +1456,7 @@
                         const cellData = resultsGrid[player.id][raidIndex];
                         let cellContent = cellData.isModified ? Math.floor(cellData.value).toLocaleString('ko-KR', { maximumFractionDigits: 0 }) : cellData.value.toLocaleString('ko-KR', { maximumFractionDigits: 0 });
                         if (cellData.isModified) {
-                            cellContent += ` <span style="font-size:0.85em; color:var(--text-muted-color);">(${cellData.originalValue.toLocaleString('ko-KR', { maximumFractionDigits: 0 })})</span>`;
+                            cellContent += ` <span style="font-size:0.85em; opacity: 0.8;">(${cellData.originalValue.toLocaleString('ko-KR', { maximumFractionDigits: 0 })})</span>`;
                         }
                         tableHtml += `<td class="${cellData.class}">${cellContent}</td>`;
                     }
@@ -1379,7 +1517,7 @@
                         document.execCommand('copy');
                         const copyButton = document.getElementById('copyButton');
                         const originalText = copyButton.textContent;
-                        copyButton.textContent = '복사 완료!';
+                        copyButton.textContent = '복사 완료';
                         setTimeout(() => { copyButton.textContent = originalText; }, 2000);
                     } catch (err) {
                         console.error('클립보드 복사에 실패했습니다.', err);
@@ -1397,9 +1535,9 @@
                 radio.addEventListener('change', (e) => {
                     let placeholderText = "";
                     const value = e.target.value;
-                    if (value === '12') placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요.";
-                    else if (value === '8') placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 8줄 데이터를 복사하여 여기에 붙여넣으세요.";
-                    else placeholderText = "엑셀에서 '닉네임, 모험단, 메인딜, 업둥이1, 업둥이2, 버퍼' 순서의 4줄 데이터를 복사하여 여기에 붙여넣으세요.";
+                    if (value === '12') placeholderText = "엑셀에서 '닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요.";
+                    else if (value === '8') placeholderText = "엑셀에서 '닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼' 순서의 8줄 데이터를 복사하여 여기에 붙여넣으세요.";
+                    else placeholderText = "엑셀에서 '닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼' 순서의 4줄 데이터를 복사하여 여기에 붙여넣으세요.";
                     document.getElementById('excelData').placeholder = placeholderText;
                 });
             });
@@ -1583,7 +1721,7 @@
         }
     </script>
     
-    <!-- NEW SCRIPT for Memo Pad -->
+    <!-- Script for Memo Pad (Functionality Unchanged) -->
     <script>
     function initMemoPad() {
         const container = document.getElementById('memo-pad-container');
@@ -1601,6 +1739,7 @@
         let headerRow = thead.insertRow();
         let corner = document.createElement('th');
         corner.className = 'corner-header';
+        corner.textContent = '#'; // Added '#' for clarity
         headerRow.appendChild(corner);
         for (let i = 0; i < COLS; i++) {
             let th = document.createElement('th');
@@ -1796,7 +1935,3 @@
     </script>
 </body>
 </html>
-
-
-
-
