@@ -1768,9 +1768,71 @@
             }
             container.appendChild(table);
 
+            // --- Undo/Redo Logic & Selection Variables ---
+            let undoStack = [];
+            let redoStack = [];
             let isSelecting = false;
             let startCell = null;
             let endCell = null;
+            let snapshotBeforeFocus = null; // 셀 편집 진입 전 상태 저장용
+
+            // Helper: 현재 테이블 데이터 전체 스냅샷 생성
+            function getSnapshot() {
+                const snapshot = [];
+                const rows = table.tBodies[0].rows;
+                for (let i = 0; i < rows.length; i++) {
+                    const rowData = [];
+                    const cells = rows[i].cells;
+                    // rowHeader(index 0) 제외하고 데이터 셀(index 1~)만 저장
+                    for (let j = 1; j < cells.length; j++) {
+                        rowData.push(cells[j].textContent);
+                    }
+                    snapshot.push(rowData);
+                }
+                return JSON.stringify(snapshot);
+            }
+
+            // Helper: 스냅샷으로 테이블 복구
+            function restoreSnapshot(jsonSnapshot) {
+                const snapshot = JSON.parse(jsonSnapshot);
+                const rows = table.tBodies[0].rows;
+                for (let i = 0; i < rows.length; i++) {
+                    const cells = rows[i].cells;
+                    for (let j = 1; j < cells.length; j++) {
+                        // 데이터 셀 인덱스 주의 (j-1이 스냅샷의 열 인덱스)
+                        if (snapshot[i] && snapshot[i][j - 1] !== undefined) {
+                            cells[j].textContent = snapshot[i][j - 1];
+                        }
+                    }
+                }
+            }
+
+            // Helper: 상태 저장 (Undo 스택에 푸시)
+            function saveState() {
+                const current = getSnapshot();
+                // 마지막 상태와 동일하면 저장하지 않음
+                if (undoStack.length > 0 && undoStack[undoStack.length - 1] === current) return;
+                undoStack.push(current);
+                redoStack = []; // 새로운 동작 발생 시 Redo 스택 초기화
+            }
+
+            function performUndo() {
+                if (undoStack.length === 0) return;
+                const current = getSnapshot();
+                redoStack.push(current);
+                const prev = undoStack.pop();
+                restoreSnapshot(prev);
+            }
+
+            function performRedo() {
+                if (redoStack.length === 0) return;
+                const current = getSnapshot();
+                undoStack.push(current);
+                const next = redoStack.pop();
+                restoreSnapshot(next);
+            }
+
+            // --- Selection Logic ---
             const cells = Array.from(table.getElementsByClassName('data-cell'));
 
             function clearSelection() {
@@ -1794,42 +1856,28 @@
                 });
             }
 
-            // Add Drag and Drop Events
-            table.addEventListener('dragover', (e) => {
-                e.preventDefault(); // Necessary to allow dropping
+            // --- Cell Edit State Tracking (Focus/Blur) ---
+            // 셀에 포커스가 들어갈 때 상태 저장 (편집 후 빠져나갈 때 비교를 위함)
+            table.addEventListener('focusin', (e) => {
+                if (e.target.classList.contains('data-cell')) {
+                    snapshotBeforeFocus = getSnapshot();
+                }
             });
 
-            table.addEventListener('drop', (e) => {
-                e.preventDefault();
-                // Get plain text data
-                const text = e.dataTransfer.getData('text/plain');
-                // The target element might be a cell or a child of a cell
-                let target = e.target;
-                if (!target.classList.contains('data-cell')) {
-                    // Try to find the closest cell if dropped on content inside
-                    target = target.closest('.data-cell');
-                }
-                
-                if (target && target.classList.contains('data-cell')) {
-                    const startRow = parseInt(target.dataset.row);
-                    const startCol = parseInt(target.dataset.col);
-                    
-                    const rows = text.split(/\r?\n/).filter(r => r.length > 0);
-                    rows.forEach((rowData, i) => {
-                        const cellsData = rowData.split('\t');
-                        cellsData.forEach((cellData, j) => {
-                            const targetRow = startRow + i;
-                            const targetCol = startCol + j;
-                            if (targetRow < ROWS && targetCol < COLS) {
-                                const targetCell = table.querySelector(`[data-row='${targetRow}'][data-col='${targetCol}']`);
-                                if (targetCell && targetCell.isContentEditable) {
-                                    targetCell.textContent = cellData;
-                                }
-                            }
-                        });
-                    });
+            // 셀에서 포커스가 나갈 때, 내용이 바뀌었으면 Undo 스택에 저장
+            table.addEventListener('focusout', (e) => {
+                if (e.target.classList.contains('data-cell') && snapshotBeforeFocus) {
+                    const current = getSnapshot();
+                    if (current !== snapshotBeforeFocus) {
+                        // 변경사항이 발생했으므로 변경 '이전' 상태를 Undo 스택에 넣음
+                        undoStack.push(snapshotBeforeFocus);
+                        redoStack = [];
+                    }
+                    snapshotBeforeFocus = null;
                 }
             });
+
+            // --- Event Listeners ---
 
             table.addEventListener('mousedown', (e) => {
                 if (e.target.classList.contains('data-cell')) {
@@ -1844,7 +1892,6 @@
                              selectRange(active, endCell);
                         }
                     }
-                    // Do not prevent default to allow focus on click
                 }
             });
 
@@ -1859,20 +1906,60 @@
                 isSelecting = false;
             });
             
+            // Drag and Drop with Undo
+            table.addEventListener('dragover', (e) => { e.preventDefault(); });
+            table.addEventListener('drop', (e) => {
+                e.preventDefault();
+                saveState(); // Drop 전에 상태 저장
+
+                const text = e.dataTransfer.getData('text/plain');
+                let target = e.target;
+                if (!target.classList.contains('data-cell')) target = target.closest('.data-cell');
+                
+                if (target && target.classList.contains('data-cell')) {
+                    const startRow = parseInt(target.dataset.row);
+                    const startCol = parseInt(target.dataset.col);
+                    const rowsData = text.split(/\r?\n/).filter(r => r.length > 0);
+                    rowsData.forEach((rowData, i) => {
+                        const cellsData = rowData.split('\t');
+                        cellsData.forEach((cellData, j) => {
+                            const targetRow = startRow + i;
+                            const targetCol = startCol + j;
+                            if (targetRow < ROWS && targetCol < COLS) {
+                                const targetCell = table.querySelector(`[data-row='${targetRow}'][data-col='${targetCol}']`);
+                                if (targetCell) targetCell.textContent = cellData;
+                            }
+                        });
+                    });
+                }
+            });
+
             table.addEventListener('keydown', (e) => {
+                // Undo: Ctrl+Z
+                if (e.ctrlKey && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+                    e.preventDefault();
+                    performUndo();
+                    return;
+                }
+                // Redo: Ctrl+Y or Ctrl+Shift+Z
+                if ((e.ctrlKey && e.key.toLowerCase() === 'y') || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z')) {
+                    e.preventDefault();
+                    performRedo();
+                    return;
+                }
+
                 const activeCell = document.activeElement;
                 if (!activeCell || !activeCell.classList.contains('data-cell')) return;
                 
                 const row = parseInt(activeCell.dataset.row);
                 const col = parseInt(activeCell.dataset.col);
-
                 let nextCell = null;
-                if (e.key === 'Tab' && !e.shiftKey) {
+
+                // Navigation
+                if (e.key === 'Tab') {
                     e.preventDefault();
-                    nextCell = table.querySelector(`[data-row='${row}'][data-col='${col + 1}']`) || table.querySelector(`[data-row='${row + 1}'][data-col='0']`);
-                } else if (e.key === 'Tab' && e.shiftKey) {
-                    e.preventDefault();
-                    nextCell = table.querySelector(`[data-row='${row}'][data-col='${col - 1}']`) || table.querySelector(`[data-row='${row - 1}'][data-col='${COLS - 1}']`);
+                    if (!e.shiftKey) nextCell = table.querySelector(`[data-row='${row}'][data-col='${col + 1}']`) || table.querySelector(`[data-row='${row + 1}'][data-col='0']`);
+                    else nextCell = table.querySelector(`[data-row='${row}'][data-col='${col - 1}']`) || table.querySelector(`[data-row='${row - 1}'][data-col='${COLS - 1}']`);
                 } else if (e.key === 'Enter') {
                      e.preventDefault();
                      nextCell = table.querySelector(`[data-row='${row + 1}'][data-col='${col}']`);
@@ -1887,90 +1974,117 @@
                 }
 
                 if (nextCell && nextCell.isContentEditable) {
-                    e.preventDefault();
+                    // 키보드 이동 시 현재 변경사항 있으면 저장 (focusout이 처리하지만 명시적 이동 시 안전장치)
                     nextCell.focus();
                     selectRange(nextCell, nextCell);
                 }
 
-                if (e.key === 'Delete') {
+                // Delete / Backspace (Bulk Delete)
+                if (e.key === 'Delete' || e.key === 'Backspace') {
                     const selected = table.querySelectorAll('.selected');
+                    // 선택된 셀이 있거나, Backspace의 경우 내용이 여러 셀에 걸친 경우
                     if (selected.length > 0) {
-                        e.preventDefault();
-                        selected.forEach(cell => {
-                            cell.textContent = '';
-                        });
-                        if(startCell) startCell.focus();
-                    }
-                } else if (e.key === 'Backspace') {
-                    const selected = table.querySelectorAll('.selected');
-                    if (selected.length > 1) {
-                        e.preventDefault();
-                        selected.forEach(cell => {
-                            cell.textContent = '';
-                        });
-                        if(startCell) startCell.focus();
+                        // 내용이 있는 셀이 하나라도 포함되어 있는지 확인
+                        let hasContent = false;
+                        selected.forEach(c => { if(c.textContent) hasContent = true; });
+                        
+                        if (hasContent) {
+                            if (e.key === 'Backspace' && selected.length === 1 && selected[0] === activeCell) {
+                                // 단일 셀 편집 중 Backspace는 기본 동작 허용 (글자 지우기)
+                                return;
+                            }
+                            
+                            e.preventDefault();
+                            saveState(); // 삭제 전 상태 저장
+                            selected.forEach(cell => { cell.textContent = ''; });
+                            if(startCell) startCell.focus();
+                        }
                     }
                 }
             });
 
+            // Copy Logic
             table.addEventListener('copy', (e) => {
                 const selected = table.querySelectorAll('.selected');
                 if (selected.length === 0) return;
-
                 e.preventDefault();
 
-                const selectionRect = {
-                    minRow: Infinity, maxRow: -Infinity,
-                    minCol: Infinity, maxCol: -Infinity
-                };
-
-                selected.forEach(cell => {
-                    selectionRect.minRow = Math.min(selectionRect.minRow, parseInt(cell.dataset.row));
-                    selectionRect.maxRow = Math.max(selectionRect.maxRow, parseInt(cell.dataset.row));
-                    selectionRect.minCol = Math.min(selectionRect.minCol, parseInt(cell.dataset.col));
-                    selectionRect.maxCol = Math.max(selectionRect.maxCol, parseInt(cell.dataset.col));
-                });
-
-                let copyString = '';
-                for (let i = selectionRect.minRow; i <= selectionRect.maxRow; i++) {
-                    const rowData = [];
-                    for (let j = selectionRect.minCol; j <= selectionRect.maxCol; j++) {
-                        const cell = table.querySelector(`[data-row='${i}'][data-col='${j}']`);
-                        rowData.push(cell ? cell.textContent : '');
-                    }
-                    copyString += rowData.join('\t');
-                    if (i < selectionRect.maxRow) {
-                        copyString += '\n';
-                    }
-                }
-
+                const selectionRect = getSelectionRect(selected);
+                const copyString = buildStringFromSelection(selectionRect);
                 e.clipboardData.setData('text/plain', copyString);
             });
 
+            // Cut Logic (NEW: Ctrl+X for multiple cells)
+            table.addEventListener('cut', (e) => {
+                const selected = table.querySelectorAll('.selected');
+                if (selected.length === 0) return;
+                
+                e.preventDefault();
+                saveState(); // 잘라내기 전 상태 저장
+
+                // 1. Copy
+                const selectionRect = getSelectionRect(selected);
+                const copyString = buildStringFromSelection(selectionRect);
+                e.clipboardData.setData('text/plain', copyString);
+
+                // 2. Clear content
+                selected.forEach(cell => cell.textContent = '');
+            });
+
+            // Paste Logic
             table.addEventListener('paste', (e) => {
                 e.preventDefault();
+                saveState(); // 붙여넣기 전 상태 저장
+                
                 const text = (e.clipboardData || window.clipboardData).getData('text');
                 const activeCell = document.activeElement;
                 if (!activeCell || !activeCell.classList.contains('data-cell')) return;
 
                 const startRow = parseInt(activeCell.dataset.row);
                 const startCol = parseInt(activeCell.dataset.col);
+                const rowsData = text.split(/\r?\n/).filter(r => r.length > 0);
 
-                const rows = text.split(/\r?\n/).filter(r => r.length > 0);
-                rows.forEach((rowData, i) => {
+                rowsData.forEach((rowData, i) => {
                     const cellsData = rowData.split('\t');
                     cellsData.forEach((cellData, j) => {
                         const targetRow = startRow + i;
                         const targetCol = startCol + j;
                         if (targetRow < ROWS && targetCol < COLS) {
                             const targetCell = table.querySelector(`[data-row='${targetRow}'][data-col='${targetCol}']`);
-                            if (targetCell && targetCell.isContentEditable) {
-                                targetCell.textContent = cellData;
-                            }
+                            if (targetCell) targetCell.textContent = cellData;
                         }
                     });
                 });
             });
+
+            // Helper functions for Copy/Cut
+            function getSelectionRect(selectedCells) {
+                let minRow = Infinity, maxRow = -Infinity, minCol = Infinity, maxCol = -Infinity;
+                selectedCells.forEach(cell => {
+                    const r = parseInt(cell.dataset.row);
+                    const c = parseInt(cell.dataset.col);
+                    minRow = Math.min(minRow, r);
+                    maxRow = Math.max(maxRow, r);
+                    minCol = Math.min(minCol, c);
+                    maxCol = Math.max(maxCol, c);
+                });
+                return { minRow, maxRow, minCol, maxCol };
+            }
+
+            function buildStringFromSelection(rect) {
+                let str = '';
+                for (let i = rect.minRow; i <= rect.maxRow; i++) {
+                    const rowData = [];
+                    for (let j = rect.minCol; j <= rect.maxCol; j++) {
+                        const cell = table.querySelector(`[data-row='${i}'][data-col='${j}']`);
+                        // 선택 범위 내에 있지만 선택되지 않은 셀(빈 공간)은 빈 문자열 처리
+                        rowData.push(cell && cell.classList.contains('selected') ? cell.textContent : '');
+                    }
+                    str += rowData.join('\t');
+                    if (i < rect.maxRow) str += '\n';
+                }
+                return str;
+            }
         }
     </script>
 </body>
