@@ -1304,16 +1304,16 @@
                     html += `<tr class="${rowClass}">`;
                     html += `<td style="font-weight:700;">${p.partyId}파티</td>`;
                     
-                    // Buffer
+                    // Buffer (Modified: nickname -> guild)
                     let bufSuffix = p.buffer.player.chars['버퍼'].text ? `<span class="suffix-text">${p.buffer.player.chars['버퍼'].text}</span>` : '';
-                    html += `<td class="role-buffer"><div class="role-badge no-copy">버퍼</div>${p.buffer.player.nickname}<br><span style="font-size:0.8em">${p.buffer.player.chars['버퍼'].val}${bufSuffix}</span></td>`;
+                    html += `<td class="role-buffer"><div class="role-badge no-copy">버퍼</div>${p.buffer.player.guild}<br><span style="font-size:0.8em">${p.buffer.player.chars['버퍼'].val}${bufSuffix}</span></td>`;
                     
-                    // Dealers
+                    // Dealers (Modified: nickname -> guild)
                     p.dealers.forEach(d => {
                         let roleName = d.role === '딜러' ? '메인딜' : (d.role==='업둥이1'?'업1':'업2');
                         let valStr = d.isModified ? `${Math.floor(d.effectiveDps)} (${d.player.chars[d.role].val})` : d.effectiveDps;
                         let suffix = d.textSuffix ? `<span class="suffix-text">${d.textSuffix}</span>` : '';
-                        html += `<td><div class="role-badge no-copy">${roleName}</div><span style="font-weight:600;">${d.player.nickname}</span><br><span style="font-size:0.85em">${valStr}${suffix}</span></td>`;
+                        html += `<td><div class="role-badge no-copy">${roleName}</div><span style="font-weight:600;">${d.player.guild}</span><br><span style="font-size:0.85em">${valStr}${suffix}</span></td>`;
                     });
                     
                     html += `<td style="font-weight:800; color:var(--primary-color);">${p.synergy.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}</td>`;
