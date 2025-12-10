@@ -707,8 +707,8 @@
                         <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
                             <span class="tooltip-icon">?</span>
                             <span class="tooltip-text" style="width: 320px; margin-left: -160px;">
-                                파티 내 플레이어 순서를 국룰대로 조합합니다.<br>(벞1234,메인딜4321)<br>정순:쌘 업둥이 먼저 | 역순:약한 업둥이 먼저<br>
-                                <strong>몰빵 분배 시 이 옵션은 인원 분배 기준으로 사용합니다.</strong>
+                                파티 내 플레이어 순서를 국룰대로 조합합니다.<br>(벞1234,메인딜4321)<br>정순:업둥이1 먼저배치 | 역순:업둥이2 먼저배치<br>
+                                <strong>몰빵 분배 시 이 옵션은 인원 분배(스케줄) 기준으로 사용됩니다.</strong>
                             </span>
                         </span>	
                     </div>
@@ -1583,7 +1583,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const inputsToPersist = [
-                { id: 'excelData', type: 'text' },
+                // { id: 'excelData', type: 'text' }, // Removed persistence
                 { id: 'updoongieThreshold', type: 'value' },
                 { id: 'updoongieCap', type: 'value' },
                 { id: 'updoongieBufferMultiplier', type: 'value' },
@@ -1733,7 +1733,7 @@
 
             const COLS = 6;
             const ROWS = 12; // 12 editable rows
-            const fixedHeaders = ['닉네임', '모험단', '딜러1', '딜러2', '딜러3', '버퍼'];
+            const fixedHeaders = ['닉네임', '모험단', '메인딜', '업둥이1', '업둥이2', '버퍼'];
 
             let table = document.createElement('table');
             table.className = 'memo-pad-table';
