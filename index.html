@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>공격대 파티 자동 조합기</title>
+    <title>공격대 파티 자동 조합기 (무리 로직 추가)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -393,6 +393,19 @@
             margin-bottom: 2px;
             line-height: 1.2;
         }
+        
+        .muri-badge {
+            display: inline-block;
+            font-size: 9px;
+            font-weight: 700;
+            color: #fff;
+            background-color: #e53935;
+            padding: 1px 4px;
+            border-radius: 3px;
+            margin-right: 3px;
+            vertical-align: middle;
+        }
+        
         /* No Copy Class (Will be ignored by script) */
         .no-copy {
             /* Visual only */
@@ -661,7 +674,8 @@
                             <span class="tooltip-text">
                                 닉네임과 모험단은 띄어쓰기 없이 붙여서 입력하세요.<br><br>
                                 숫자 뒤에 텍스트를 붙여 입력할 수 있습니다. (예: 225뮤즈)<br>
-                                이 경우 숫자는 계산에 사용되고 텍스트는 결과에 표시됩니다.
+                                이 경우 숫자는 계산에 사용되고 텍스트는 결과에 표시됩니다.<br><br>
+                                <strong>'무리' 로직:</strong> 수치 앞에 "무리" 또는 "(무리)"를 입력하면, 해당 캐릭터들은 한 파티에 2명 이상 배정되지 않습니다. (예: 무리250)
                             </span>
                         </span>
                     </h2>
@@ -846,13 +860,22 @@
         
         function parseValAndText(str) {
             str = String(str).trim();
+            let isMuri = false;
+            
+            // Check for "무리" prefix (e.g., "무리250", "(무리)270")
+            const muriMatch = str.match(/^(\(무리\)|무리)\s*(.*)/);
+            if (muriMatch) {
+                isMuri = true;
+                str = muriMatch[2].trim();
+            }
+
             const match = str.match(/^(\d+)(.*)$/);
             if (match) {
                 let val = parseInt(match[1], 10);
                 let text = match[2].trim();
-                return { val: val, text: text };
+                return { val: val, text: text, isMuri: isMuri };
             }
-            return { val: 0, text: '' };
+            return { val: 0, text: '', isMuri: false };
         }
 
         function parseData(text, expectedLines) {
@@ -926,7 +949,7 @@
                     displayValue = dpsContribution;
                 }
                 
-                processedPlayers.push({ player, role, displayValue, originalValue, textSuffix: charData.text, roleClass, isModified });
+                processedPlayers.push({ player, role, displayValue, originalValue, textSuffix: charData.text, roleClass, isModified, isMuri: charData.isMuri });
             }
             return { synergy: totalDps * bufferPower, processedPlayers };
         }
@@ -939,6 +962,9 @@
             
             playersWithRoles.forEach(p => {
                 const charData = p.player.chars[p.role]; 
+                // Store isMuri in the top level object for easier access
+                p.isMuri = charData.isMuri;
+
                 if (p.role === '버퍼') {
                     buffers.push(p);
                 } else {
@@ -1055,7 +1081,16 @@
                 }
             }
             
-            return parties.sort((a,b) => a.partyId - b.partyId);
+            // Check Muri Constraints on generated parties
+            let isInvalid = false;
+            parties.forEach(party => {
+                let muriCount = 0;
+                if (party.buffer.isMuri) muriCount++;
+                party.dealers.forEach(d => { if(d.isMuri) muriCount++; });
+                if (muriCount > 1) isInvalid = true;
+            });
+            
+            return { parties: parties.sort((a,b) => a.partyId - b.partyId), isInvalid };
         }
 
         function getCombinations(array, size) {
@@ -1173,24 +1208,34 @@
             for (const partition of allPartitions) {
                 const raidResults = [];
                 const p1Synergies = [];
+                let partitionInvalid = false;
 
                 for (let r = 0; r < 4; r++) {
                     const activePlayersForRaid = [];
                     for (let g = 0; g < numParties; g++) {
                         const groupPlayers = partition[g];
-                        const roleIndices = activeSchedule[r]; 
-                        groupPlayers.forEach((player, idxInGroup) => {
-                            const roleIdx = roleIndices[idxInGroup];
+                        const roleIndices = activeSchedule[r][pIdx]; 
+                        // Fix: The loop should use the player index in group
+                         groupPlayers.forEach((player, idxInGroup) => {
+                            const roleIdx = activeSchedule[r][idxInGroup];
                             const role = charRoles[roleIdx];
                             activePlayersForRaid.push({ player, role });
                         });
                     }
 
                     // Calculate Molppang Logic (including sub-option balancing)
-                    const molppangParties = calculateMolppangSynergyForRaid(activePlayersForRaid, r, options);
+                    const { parties: molppangParties, isInvalid } = calculateMolppangSynergyForRaid(activePlayersForRaid, r, options);
+                    
+                    if (isInvalid) {
+                        partitionInvalid = true;
+                        break;
+                    }
+
                     raidResults.push(molppangParties);
                     p1Synergies.push(molppangParties[0].synergy);
                 }
+
+                if (partitionInvalid) continue;
 
                 const stats = calculateStats(p1Synergies);
                 let currentScore;
@@ -1219,9 +1264,9 @@
             if (bestMolppangResult) {
                 displayMolppangResults(bestMolppangResult);
                 document.getElementById('status').className = 'status-success';
-                document.getElementById('status').textContent = `몰빵 조합 탐색 완료! (총 ${checked}개 조합 확인)`;
+                document.getElementById('status').textContent = `몰빵 조합 탐색 완료! (유효 조합 ${checked}개 확인)`;
             } else {
-                throw new Error("조합 실패");
+                throw new Error("유효한 조합을 찾을 수 없습니다. (무리 제한이나 모험단 중복 확인)");
             }
         }
 
@@ -1256,8 +1301,9 @@
                         else if (role === '업둥이1') roleClass = 'role-updoongie1';
                         else roleClass = 'role-updoongie2';
                         
-                        let charData = player.chars[role]; // {val, text}
-                        let displayTxt = charData.val.toLocaleString() + (charData.text ? `<span class="suffix-text">${charData.text}</span>` : '');
+                        let charData = player.chars[role]; // {val, text, isMuri}
+                        let muriBadge = charData.isMuri ? `<span class="muri-badge no-copy">[무리]</span>` : '';
+                        let displayTxt = muriBadge + charData.val.toLocaleString() + (charData.text ? `<span class="suffix-text">${charData.text}</span>` : '');
                         html += `<td class="${roleClass}">${displayTxt}</td>`;
                     }
                     html += `</tr>`;
@@ -1304,16 +1350,19 @@
                     html += `<tr class="${rowClass}">`;
                     html += `<td style="font-weight:700;">${p.partyId}파티</td>`;
                     
-                    // Buffer (Modified: nickname -> guild)
-                    let bufSuffix = p.buffer.player.chars['버퍼'].text ? `<span class="suffix-text">${p.buffer.player.chars['버퍼'].text}</span>` : '';
-                    html += `<td class="role-buffer"><div class="role-badge no-copy">버퍼</div>${p.buffer.player.guild}<br><span style="font-size:0.8em">${p.buffer.player.chars['버퍼'].val}${bufSuffix}</span></td>`;
+                    // Buffer
+                    let bufChar = p.buffer.player.chars['버퍼'];
+                    let bufMuri = bufChar.isMuri ? `<span class="muri-badge no-copy">[무리]</span>` : '';
+                    let bufSuffix = bufChar.text ? `<span class="suffix-text">${bufChar.text}</span>` : '';
+                    html += `<td class="role-buffer"><div class="role-badge no-copy">버퍼</div>${p.buffer.player.guild}<br><span style="font-size:0.8em">${bufMuri}${bufChar.val}${bufSuffix}</span></td>`;
                     
-                    // Dealers (Modified: nickname -> guild)
+                    // Dealers
                     p.dealers.forEach(d => {
                         let roleName = d.role === '딜러' ? '메인딜' : (d.role==='업둥이1'?'업1':'업2');
                         let valStr = d.isModified ? `${Math.floor(d.effectiveDps)} (${d.player.chars[d.role].val})` : d.effectiveDps;
+                        let muriBadge = d.isMuri ? `<span class="muri-badge no-copy">[무리]</span>` : '';
                         let suffix = d.textSuffix ? `<span class="suffix-text">${d.textSuffix}</span>` : '';
-                        html += `<td><div class="role-badge no-copy">${roleName}</div><span style="font-weight:600;">${d.player.guild}</span><br><span style="font-size:0.85em">${valStr}${suffix}</span></td>`;
+                        html += `<td><div class="role-badge no-copy">${roleName}</div><span style="font-weight:600;">${d.player.guild}</span><br><span style="font-size:0.85em">${muriBadge}${valStr}${suffix}</span></td>`;
                     });
                     
                     html += `<td style="font-weight:800; color:var(--primary-color);">${p.synergy.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}</td>`;
@@ -1378,9 +1427,14 @@
                             parties[partyIndex], activeSchedule[raidIndex], charRoles,
                             updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer
                         );
+                        // Check logic: Updoongie modified constraint AND Muri constraint
                         if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) {
                             isValidCombination = false; break;
                         }
+                        if (synergyResult.processedPlayers.filter(p => p.isMuri).length > 1) {
+                            isValidCombination = false; break;
+                        }
+
                         allRaidSynergies.push(synergyResult.synergy);
                         currentDetailedRaidPlayerResults.push(synergyResult.processedPlayers);
                     }
@@ -1406,8 +1460,8 @@
             if (bestCombination) {
                 displayResults(bestCombination, players);
                 document.getElementById('status').className = 'status-success';
-                document.getElementById('status').textContent = `전체 조합 탐색 완료! (총 ${checkedPartitions.toLocaleString()}개 조합 확인)`;
-            } else { throw new Error(`'국룰 조합'을 찾는 데 실패했습니다.`); }
+                document.getElementById('status').textContent = `전체 조합 탐색 완료! (유효 조합 ${checkedPartitions.toLocaleString()}개 확인)`;
+            } else { throw new Error(`유효한 조합을 찾는 데 실패했습니다. (무리 제한이나 모험단 중복 확인)`); }
         }
 
         function findBestStandardPartyHeuristic(players, numParties, options) {
@@ -1423,6 +1477,7 @@
                         for (let p = 0; p < numParties; p++) {
                             const res = calculatePartySynergy(parties[p], partySchedules[p][r], charRoles, updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer);
                             if (res.processedPlayers.filter(pl => pl.isModified).length > 1) { isValid = false; break; }
+                            if (res.processedPlayers.filter(pl => pl.isMuri).length > 1) { isValid = false; break; }
                             allRaidSynergies.push(res.synergy);
                         } if (!isValid) break;
                     }
@@ -1464,6 +1519,7 @@
                     for (let p = 0; p < numParties; p++) {
                          const res = calculatePartySynergy(bestSolution[p], partySchedules[p][r], charRoles, updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer);
                         if (res.processedPlayers.filter(pl => pl.isModified).length > 1) { isValid = false; break; }
+                        if (res.processedPlayers.filter(pl => pl.isMuri).length > 1) { isValid = false; break; }
                         allRaidSynergies.push(res.synergy); currentDetailedRaidPlayerResults.push(res.processedPlayers);
                     } if (!isValid) break;
                 }
@@ -1490,6 +1546,7 @@
                 for (let r = 0; r < 4; r++) {
                     const res = calculatePartySynergy(players, schedule[r], charRoles, updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer);
                     if (res.processedPlayers.filter(p => p.isModified).length > 1) { isValidSchedule = false; break; }
+                    if (res.processedPlayers.filter(p => p.isMuri).length > 1) { isValidSchedule = false; break; }
                     raidSynergies.push(res.synergy); raidDetailedPlayerResults.push(res.processedPlayers);
                 }
                 if (!isValidSchedule) continue;
@@ -1541,11 +1598,14 @@
                         if (cellData.isModified) { cellContent += ` <span style="font-size:0.85em; opacity: 0.8;">(${cellData.originalValue.toLocaleString('ko-KR', { maximumFractionDigits: 0 })})</span>`; }
                         if (cellData.textSuffix) { cellContent += ` <span class="suffix-text">${cellData.textSuffix}</span>`; }
                         
-                        // [REQUEST] Role Badge
+                        // Role Badge
                         let roleName = cellData.role === '딜러' ? '메인딜' : (cellData.role === '버퍼' ? '버퍼' : (cellData.role === '업둥이1' ? '업1' : '업2'));
                         let badgeHtml = `<div class="role-badge no-copy">${roleName}</div>`;
                         
-                        tableHtml += `<td class="${cellData.roleClass}">${badgeHtml}${cellContent}</td>`;
+                        // Muri Badge
+                        let muriBadge = cellData.isMuri ? `<span class="muri-badge no-copy">[무리]</span>` : '';
+
+                        tableHtml += `<td class="${cellData.roleClass}">${badgeHtml}${muriBadge}${cellContent}</td>`;
                     }
                     tableHtml += `</tr>`;
                 });
@@ -1568,7 +1628,7 @@
                  const cells = row.querySelectorAll('td, th');
                  const rowData = [];
                  cells.forEach(cell => {
-                    // [REQUEST] Clone to remove no-copy elements without affecting DOM
+                    // Clone to remove no-copy elements without affecting DOM
                     let clone = cell.cloneNode(true);
                     clone.querySelectorAll('.no-copy').forEach(el => el.remove());
                     rowData.push(clone.innerText.replace(/\n/g, ' ').trim());
@@ -1712,7 +1772,7 @@
             const updoongieCapInputContainer = document.getElementById('updoongieCapInputContainer');
             const updoongieMultiplierInputContainer = document.getElementById('updoongieMultiplierInputContainer');
 
-            // [REQUEST] Fix UI state on load based on checkbox
+            // Fix UI state on load based on checkbox
             function updateUpdoongieVisibility() {
                 updoongBufferOptionsContainer.classList.toggle('hidden', !useUpdoongBufferCheckbox.checked);
             }
@@ -2089,6 +2149,3 @@
     </script>
 </body>
 </html>
-
-
-
