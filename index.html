@@ -612,8 +612,21 @@
 
         /* Selection highlight */
         tbody.party-group.selected {
-            box-shadow: 0 0 0 2px var(--primary-color) inset;
+            /* Fixed: Use outline for clear border that sits on top of cell backgrounds */
+            outline: 3px solid var(--primary-color);
+            outline-offset: -3px;
+            background-color: rgba(44, 62, 80, 0.03);
         }
+        /* Ensure tbody positioning for outline */
+        tbody.party-group {
+            position: relative;
+            z-index: 1;
+        }
+        /* Raise selected group z-index so outline is visible */
+        tbody.party-group.selected {
+            z-index: 5;
+        }
+
         tr.player-row.selected td {
             background-color: var(--selection-color) !important;
         }
@@ -819,6 +832,12 @@
 
                     <div id="resultOutput">
                         <div style="text-align: center; color: var(--text-muted-color); padding: 40px; border: 2px dashed var(--border-color); border-radius: var(--radius-md);">데이터를 입력하고 '최적 조합 생성'을 눌러주세요.</div>
+                    </div>
+                    
+                    <!-- Added Ordering Controls -->
+                    <div id="ordering-controls" class="hidden">
+                        <button id="moveResultUp" onclick="moveResultItem('up')">▲ 위로</button>
+                        <button id="moveResultDown" onclick="moveResultItem('down')">▼ 아래로</button>
                     </div>
                 </div>
 
@@ -1135,6 +1154,7 @@
             const mode = document.querySelector('input[name="mode"]:checked').value;
             
             document.getElementById('copyButton').style.display = 'none';
+            document.getElementById('ordering-controls').classList.add('hidden'); // Hide controls initially
             statusDiv.className = 'status-info';
             statusDiv.textContent = '최적 조합을 탐색 중입니다...';
             resultDiv.innerHTML = '<div class="spinner"></div>';
@@ -1631,6 +1651,116 @@
             tableHtml += `</table>`;
             resultDiv.innerHTML = tableHtml;
             const copyButton = document.getElementById('copyButton'); if(copyButton) copyButton.style.display = 'block';
+            document.getElementById('ordering-controls').classList.remove('hidden'); // Show ordering controls
+            setupResultSelection();
+        }
+
+        // --- Reordering & Selection Logic ---
+        let selectedResultElement = null;
+        let selectionType = null; // 'party' or 'player'
+
+        function setupResultSelection() {
+            const table = document.querySelector('#resultOutput table');
+            if (!table) return;
+
+            table.addEventListener('click', function(e) {
+                // Check if click is on Party Header
+                const partyHeaderCell = e.target.closest('.party-header');
+                const row = e.target.closest('tr.player-row');
+
+                // Clear previous selection if clicking unrelated area
+                if (!partyHeaderCell && !row) return;
+
+                // Deselect everything first
+                document.querySelectorAll('.party-group.selected, .player-row.selected').forEach(el => el.classList.remove('selected'));
+                selectedResultElement = null;
+                selectionType = null;
+
+                if (partyHeaderCell) {
+                    const tbody = partyHeaderCell.closest('tbody');
+                    tbody.classList.add('selected');
+                    selectedResultElement = tbody;
+                    selectionType = 'party';
+                } else if (row) {
+                    row.classList.add('selected');
+                    selectedResultElement = row;
+                    selectionType = 'player';
+                }
+            });
+        }
+
+        function moveResultItem(direction) {
+            if (!selectedResultElement) return;
+
+            if (selectionType === 'party') {
+                const current = selectedResultElement; // tbody
+                const parent = current.parentNode;
+                
+                if (direction === 'up') {
+                    const prev = current.previousElementSibling;
+                    if (prev && prev.tagName === 'TBODY') {
+                        parent.insertBefore(current, prev);
+                        renumberParties();
+                    }
+                } else {
+                    const next = current.nextElementSibling;
+                    if (next && next.tagName === 'TBODY') {
+                        parent.insertBefore(next, current); // insert next before current = swap
+                        renumberParties();
+                    }
+                }
+            } else if (selectionType === 'player') {
+                const current = selectedResultElement; // tr
+                const parent = current.parentNode; // tbody
+
+                if (direction === 'up') {
+                    const prev = current.previousElementSibling;
+                    if (prev && prev.classList.contains('player-row')) {
+                        swapRows(current, prev);
+                    }
+                } else {
+                    const next = current.nextElementSibling;
+                    if (next && next.classList.contains('player-row')) {
+                        swapRows(current, next);
+                    }
+                }
+            }
+        }
+
+        function swapRows(rowA, rowB) {
+            // Because RowSpan cell (Party Header) is physically inside the first row of the group,
+            // standard DOM swapping breaks the layout.
+            // Strategy: Swap content of cells (excluding the party-header cell)
+            
+            // Get cells (convert to array)
+            const cellsA = Array.from(rowA.children).filter(c => !c.classList.contains('party-header'));
+            const cellsB = Array.from(rowB.children).filter(c => !c.classList.contains('party-header'));
+
+            // Swap contents
+            for (let i = 0; i < cellsA.length; i++) {
+                const tempHTML = cellsA[i].innerHTML;
+                const tempClass = cellsA[i].className;
+                
+                cellsA[i].innerHTML = cellsB[i].innerHTML;
+                cellsA[i].className = cellsB[i].className;
+                
+                cellsB[i].innerHTML = tempHTML;
+                cellsB[i].className = tempClass;
+            }
+            
+            // Maintain Selection Highlight (The DOM element 'rowA' didn't move, but its content swapped)
+            // We want the highlighting to follow the content.
+            document.querySelectorAll('.player-row.selected').forEach(el => el.classList.remove('selected'));
+            rowB.classList.add('selected'); // If moving A up to B, A's content is now in B (visually up)
+            selectedResultElement = rowB;
+        }
+
+        function renumberParties() {
+            const groups = document.querySelectorAll('.party-group');
+            groups.forEach((group, index) => {
+                const header = group.querySelector('.party-header');
+                if(header) header.textContent = (index + 1) + '파티';
+            });
         }
 
         // --- Clipboard & Events ---
@@ -2164,4 +2294,3 @@
     </script>
 </body>
 </html>
-
