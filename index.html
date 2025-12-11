@@ -175,11 +175,11 @@
             padding: 12px;
             position: absolute;
             z-index: 100;
-            bottom: 140%;
+            bottom: 140%; /* Default: Above */
             left: 50%;
             transform: translateX(-50%);
             opacity: 0;
-            transition: opacity 0.2s, bottom 0.2s;
+            transition: opacity 0.2s, bottom 0.2s, top 0.2s;
             font-size: 13px;
             line-height: 1.5;
             font-weight: 400;
@@ -202,6 +202,21 @@
             visibility: visible;
             opacity: 1;
             bottom: 130%;
+        }
+
+        /* --- New: Downward Tooltip Variant (Fix for Clipping) --- */
+        .tooltip-text.tooltip-down {
+            bottom: auto;
+            top: 140%; /* Start below */
+        }
+        .tooltip-wrapper:hover .tooltip-text.tooltip-down {
+            bottom: auto;
+            top: 130%; /* Hover state below */
+        }
+        .tooltip-text.tooltip-down::after {
+            top: auto;
+            bottom: 100%; /* Arrow at top of box */
+            border-color: transparent transparent #333 transparent; /* Point Up */
         }
 
         textarea {
@@ -671,7 +686,7 @@
                         <span>데이터 입력</span>
                         <span class="tooltip-wrapper">
                             <span class="tooltip-icon">?</span>
-                            <span class="tooltip-text">
+                            <span class="tooltip-text tooltip-down">
                                 닉네임과 모험단은 띄어쓰기 없이 붙여서 입력하세요.<br><br>
                                 숫자 뒤에 텍스트를 붙여 입력할 수 있습니다. (예: 225뮤즈)<br>
                                 이 경우 숫자는 계산에 사용되고 텍스트는 결과에 표시됩니다.<br><br>
@@ -1214,10 +1229,10 @@
                     const activePlayersForRaid = [];
                     for (let g = 0; g < numParties; g++) {
                         const groupPlayers = partition[g];
-                        const roleIndices = activeSchedule[r][pIdx]; 
+                        const roleIndices = activeSchedule[r]; 
                         // Fix: The loop should use the player index in group
                          groupPlayers.forEach((player, idxInGroup) => {
-                            const roleIdx = activeSchedule[r][idxInGroup];
+                            const roleIdx = roleIndices[idxInGroup];
                             const role = charRoles[roleIdx];
                             activePlayersForRaid.push({ player, role });
                         });
