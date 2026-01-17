@@ -1602,6 +1602,7 @@
             const organizedRaidResults = Array(numParties).fill(null).map(() => Array(4).fill(null));
             let detailIdx = 0;
             for (let r = 0; r < 4; r++) { for (let p = 0; p < numParties; p++) { organizedRaidResults[p][r] = detailedRaidPlayerResults[detailIdx]; detailIdx++; } }
+            
             parties.forEach((party, partyIdx) => {
                 party.forEach((player, playerIdxInParty) => {
                     for (let r = 0; r < 4; r++) {
@@ -1610,8 +1611,10 @@
                     }
                 });
             });
+
             let placementLabel = '';
             if (options.standardParty) { const placementText = options.updoongiePlacement === '1' ? '정순' : '역순'; placementLabel = `<strong>순서: <span style="color: var(--primary-color);">${placementText}</span></strong> &nbsp; | &nbsp; `; }
+            
             let tableHtml = `<div class="result-summary">
                     ${placementLabel}<span><strong>딜*버프력 분포 &nbsp; | &nbsp; 최저:</strong> ${stats.min.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}</span>
                     <span><strong>평균:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}</span> 
@@ -1621,9 +1624,29 @@
                             <th>파티</th><th class="nickname-col">닉네임</th><th class="guild-col">모험단</th>
                             <th>1공대</th><th>2공대</th><th>3공대</th><th>4공대</th>
                         </tr></thead>`;
+
+            // --- 각 파티별로 내부 인원 정렬 로직 추가 ---
             parties.forEach((party, partyIdx) => {
+                // 해당 파티의 스케줄 가져오기
+                const schedule = combination.schedules[partyIdx];
+                
+                // 버퍼 역할을 수행하는 공대 차수(r) 순서대로 정렬
+                const sortedParty = [...party].sort((a, b) => {
+                    const idxA = party.indexOf(a);
+                    const idxB = party.indexOf(b);
+                    let raidA = 0, raidB = 0;
+                    
+                    // 버퍼(역할 인덱스 3)가 어느 공대(r)에 있는지 찾기
+                    for (let r = 0; r < 4; r++) {
+                        if (schedule[r][idxA] === 3) raidA = r;
+                        if (schedule[r][idxB] === 3) raidB = r;
+                    }
+                    return raidA - raidB;
+                });
+
                 tableHtml += `<tbody class="party-group">`;
-                party.forEach((player, playerIdxInParty) => {
+                // 기존 party 대신 정렬된 sortedParty를 사용해 출력
+                sortedParty.forEach((player, playerIdxInParty) => {
                     tableHtml += `<tr class="player-row">`;
                     if (playerIdxInParty === 0) { tableHtml += `<td class="party-col party-header" rowspan="5">${partyIdx + 1}파티</td>`; }
                     tableHtml += `<td class="nickname-col">${player.nickname}</td>`; tableHtml += `<td class="guild-col">${player.guild}</td>`;
@@ -1633,11 +1656,8 @@
                         if (cellData.isModified) { cellContent += ` <span style="font-size:0.85em; opacity: 0.8;">(${cellData.originalValue.toLocaleString('ko-KR', { maximumFractionDigits: 0 })})</span>`; }
                         if (cellData.textSuffix) { cellContent += ` <span class="suffix-text">${cellData.textSuffix}</span>`; }
                         
-                        // Role Badge
                         let roleName = cellData.role === '딜러' ? '메인딜' : (cellData.role === '버퍼' ? '버퍼' : (cellData.role === '업둥이1' ? '업1' : '업2'));
                         let badgeHtml = `<div class="role-badge no-copy">${roleName}</div>`;
-                        
-                        // Muri Badge
                         let muriBadge = cellData.isMuri ? `<span class="muri-badge no-copy">[무리]</span>` : '';
 
                         tableHtml += `<td class="${cellData.roleClass}">${badgeHtml}${muriBadge}${cellContent}</td>`;
@@ -1651,7 +1671,7 @@
             tableHtml += `</table>`;
             resultDiv.innerHTML = tableHtml;
             const copyButton = document.getElementById('copyButton'); if(copyButton) copyButton.style.display = 'block';
-            document.getElementById('ordering-controls').classList.remove('hidden'); // Show ordering controls
+            document.getElementById('ordering-controls').classList.remove('hidden');
             setupResultSelection();
         }
 
