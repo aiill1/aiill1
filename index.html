@@ -1844,27 +1844,80 @@
         }
 
         // --- Clipboard & Events ---
-        function copyResultsToClipboard() {
-             const resultTable = document.querySelector('#resultOutput table');
-             if (!resultTable) return;
-             let dataToCopy = '';
-             const rows = resultTable.querySelectorAll('tr');
-             rows.forEach(row => {
-                 const cells = row.querySelectorAll('td, th');
-                 const rowData = [];
-                 cells.forEach(cell => {
-                    // Clone to remove no-copy elements without affecting DOM
-                    let clone = cell.cloneNode(true);
-                    clone.querySelectorAll('.no-copy').forEach(el => el.remove());
-                    rowData.push(clone.innerText.replace(/\n/g, ' ').trim());
-                 });
-                 dataToCopy += rowData.join('\t') + '\n';
-             });
-             const textarea = document.createElement('textarea');
-             textarea.value = dataToCopy;
-             document.body.appendChild(textarea); textarea.select(); document.execCommand('copy'); document.body.removeChild(textarea);
-             alert("복사되었습니다.");
+// --- Clipboard & Events ---
+function copyResultsToClipboard() {
+    const resultTable = document.querySelector('#resultOutput table');
+    if (!resultTable) return;
+    
+    let dataToCopy = '';
+
+    // 1. 헤더 처리 (thead)
+    const headerRow = resultTable.querySelector('thead tr');
+    if (headerRow) {
+        const headerCells = headerRow.querySelectorAll('th');
+        const headerData = [];
+        headerCells.forEach(cell => headerData.push(cell.innerText.trim()));
+        dataToCopy += headerData.join('\t') + '\n';
+    }
+
+    // 2. 본문 데이터 처리 (tbody 내의 tr들)
+    const bodyRows = resultTable.querySelectorAll('tbody tr');
+    bodyRows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const rowData = [];
+
+        // 현재 행이 파티의 시작 행인지(rowspan 셀을 포함하는지) 확인
+        const isPartyStartRow = row.querySelector('.party-header');
+        // 현재 행이 시너지 합계 행인지(colspan 셀을 포함하는지) 확인
+        const isSynergyRow = row.classList.contains('party-synergy-row');
+
+        // Case A: 파티의 2,3,4번째 플레이어 행
+        // -> 맨 앞 '파티' 열이 상위 행의 rowspan으로 인해 비어있으므로 빈 탭 추가
+        if (!isPartyStartRow && !isSynergyRow) {
+            rowData.push(''); 
         }
+        
+        // Case B: 시너지 합계 행
+        // -> 역시 맨 앞 '파티' 열이 비어있으므로 빈 탭 추가
+        if (isSynergyRow) {
+             rowData.push('');
+        }
+
+        cells.forEach(cell => {
+            // 복사 제외 요소(.no-copy) 제거를 위한 클론 생성 및 텍스트 추출
+            let clone = cell.cloneNode(true);
+            clone.querySelectorAll('.no-copy').forEach(el => el.remove());
+            let text = clone.innerText.replace(/\n/g, ' ').trim();
+
+            // 시너지 합계 행의 라벨 셀 처리 (colspan="2")
+            if (isSynergyRow && cell.classList.contains('synergy-label')) {
+                // 이 셀은 '닉네임'과 '모험단' 두 열을 차지합니다.
+                // 요청하신 출력 형식에 맞게 '닉네임' 열을 비우고, '모험단' 열에 라벨 텍스트를 넣습니다.
+                rowData.push(''); // '닉네임' 열 비우기
+                rowData.push(text); // '모험단' 열에 텍스트 입력
+            } 
+            // 그 외 일반 셀들 (파티 헤더, 닉네임, 모험단, 데이터 값 등)
+            else {
+                rowData.push(text);
+            }
+        });
+        dataToCopy += rowData.join('\t') + '\n';
+    });
+
+    // 클립보드에 복사 수행
+    const textarea = document.createElement('textarea');
+    textarea.value = dataToCopy;
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        alert("복사되었습니다. 엑셀 등에 붙여넣기 하세요.");
+    } catch (err) {
+        console.error('복사 실패:', err);
+        alert("복사에 실패했습니다. 브라우저 호환성 문제가 있을 수 있습니다.");
+    }
+    document.body.removeChild(textarea);
+}
 
         document.addEventListener('DOMContentLoaded', () => {
             const inputsToPersist = [
