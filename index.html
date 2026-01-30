@@ -1419,6 +1419,7 @@
             }
         }
         
+        // --- 개선된 함수: 국룰 파티 조합 탐색 (내부 셔플 추가) ---
         function findBestStandardPartyExhaustively(players, numParties, options) {
             const { updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier, useUpdoongBuffer, optimizationStrategy } = options;
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
@@ -1430,7 +1431,11 @@
             let bestCombination = null;
             let maxMinSynergy = -Infinity;
             let minStdDev = Infinity;
-            let checkedPartitions = 0;
+            let checkedCombinationsCount = 0; // 실제로 체크한 총 조합 수
+
+            // **개선점: 각 파티 구성별로 내부 순서를 섞어볼 횟수 설정**
+            // 횟수가 높을수록 더 정밀하지만 계산 시간이 오래 걸립니다. (50~100회 권장)
+            const internalShuffleIterations = 50; 
 
             const allPartitions = [];
             function generatePartitions(playersToPartition, currentPartitions) {
@@ -1449,53 +1454,76 @@
             }
             generatePartitions(players, []);
 
-            for (const parties of allPartitions) {
-                if (!parties.every(party => new Set(party.map(p => p.guild)).size === 4)) continue;
-                checkedPartitions++;
-                const allRaidSynergies = [];
-                const currentDetailedRaidPlayerResults = [];
-                let isValidCombination = true;
+            // 각 파티 구성(팀 나누기)에 대해 반복
+            for (const baseParties of allPartitions) {
+                if (!baseParties.every(party => new Set(party.map(p => p.guild)).size === 4)) continue;
 
-                for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
-                    for (let partyIndex = 0; partyIndex < numParties; partyIndex++) {
-                        const synergyResult = calculatePartySynergy(
-                            parties[partyIndex], activeSchedule[raidIndex], charRoles,
-                            updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer
-                        );
-                        // Check logic: Updoongie modified constraint AND Muri constraint
-                        if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) {
-                            isValidCombination = false; break;
+                // **개선점: 파티 내부 순서 랜덤 셔플 반복 시도**
+                for (let iter = 0; iter < internalShuffleIterations; iter++) {
+                    checkedCombinationsCount++;
+                    // 각 파티 내부의 인원 순서를 랜덤하게 섞음 (스케줄 할당을 변경하는 효과)
+                    const currentParties = baseParties.map(party => shuffle([...party]));
+
+                    const allRaidSynergies = [];
+                    const currentDetailedRaidPlayerResults = [];
+                    let isValidCombination = true;
+
+                    for (let raidIndex = 0; raidIndex < 4; raidIndex++) {
+                        for (let partyIndex = 0; partyIndex < numParties; partyIndex++) {
+                            const synergyResult = calculatePartySynergy(
+                                currentParties[partyIndex], activeSchedule[raidIndex], charRoles,
+                                updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer
+                            );
+                            
+                            if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) {
+                                isValidCombination = false; break;
+                            }
+                            if (synergyResult.processedPlayers.filter(p => p.isMuri).length > 1) {
+                                isValidCombination = false; break;
+                            }
+
+                            allRaidSynergies.push(synergyResult.synergy);
+                            currentDetailedRaidPlayerResults.push(synergyResult.processedPlayers);
                         }
-                        if (synergyResult.processedPlayers.filter(p => p.isMuri).length > 1) {
-                            isValidCombination = false; break;
+                        if (!isValidCombination) break;
+                    }
+
+                    if (isValidCombination) {
+                        const stats = calculateStats(allRaidSynergies);
+                        const minSynergy = Math.min(...allRaidSynergies);
+                        let isBest = false;
+                        
+                        // '표준편차' 모드일 때 편차가 더 적은 것을 선택
+                        if (optimizationStrategy === 'minStdDev') {
+                            if (stats.stdDev < minStdDev) { isBest = true; }
+                        } else { 
+                        // '최저값' 모드일 때 최저값이 더 높은 것을 선택
+                            if (minSynergy > maxMinSynergy) { isBest = true; }
                         }
 
-                        allRaidSynergies.push(synergyResult.synergy);
-                        currentDetailedRaidPlayerResults.push(synergyResult.processedPlayers);
+                        if (isBest) {
+                            maxMinSynergy = minSynergy;
+                            minStdDev = stats.stdDev;
+                            const maxSynergy = Math.max(...allRaidSynergies);
+                            // 현재의 베스트 조합(내부 순서가 섞인 상태)을 저장
+                            bestCombination = { 
+                                parties: currentParties, // 셔플된 파티 구성 저장
+                                schedules: Array(numParties).fill(activeSchedule), 
+                                synergies: allRaidSynergies, 
+                                stats: { ...stats, min: minSynergy, max: maxSynergy }, 
+                                detailedRaidPlayerResults: currentDetailedRaidPlayerResults, 
+                                options: options 
+                            };
+                        }
                     }
-                    if (!isValidCombination) break;
-                }
-
-                if (isValidCombination) {
-                    const stats = calculateStats(allRaidSynergies);
-                    const minSynergy = Math.min(...allRaidSynergies);
-                    let isBest = false;
-                    if (optimizationStrategy === 'minStdDev') {
-                        if (stats.stdDev < minStdDev) { isBest = true; minStdDev = stats.stdDev; }
-                    } else { 
-                        if (minSynergy > maxMinSynergy) { isBest = true; maxMinSynergy = minSynergy; }
-                    }
-                    if (isBest) {
-                        maxMinSynergy = minSynergy; minStdDev = stats.stdDev; const maxSynergy = Math.max(...allRaidSynergies);
-                        bestCombination = { parties, schedules: Array(numParties).fill(activeSchedule), synergies: allRaidSynergies, stats: { ...stats, min: minSynergy, max: maxSynergy }, detailedRaidPlayerResults: currentDetailedRaidPlayerResults, options: options };
-                    }
-                }
+                } // 내부 셔플 반복 끝
             }
 
             if (bestCombination) {
                 displayResults(bestCombination, players);
                 document.getElementById('status').className = 'status-success';
-                document.getElementById('status').textContent = `전체 조합 탐색 완료! (유효 조합 ${checkedPartitions.toLocaleString()}개 확인)`;
+                // 탐색한 조합 수 표시 업데이트
+                document.getElementById('status').textContent = `전체 조합 탐색 완료! (유효 조합 ${checkedCombinationsCount.toLocaleString()}개 확인)`;
             } else { throw new Error(`유효한 조합을 찾는 데 실패했습니다. (무리 제한이나 모험단 중복 확인)`); }
         }
 
@@ -2314,3 +2342,4 @@
     </script>
 </body>
 </html>
+
