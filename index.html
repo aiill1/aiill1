@@ -749,22 +749,24 @@
                         <span class="tooltip-wrapper" style="padding-bottom: 0; margin-left: 4px;">
                             <span class="tooltip-icon">?</span>
                             <span class="tooltip-text" style="width: 320px; margin-left: -160px;">
-                                파티 내 플레이어 순서를 국룰대로 조합합니다.<br>(벞1234,메인딜4321)<br>정순:업둥이1 먼저배치 | 역순:업둥이2 먼저배치<br>혼합:1~2번은 업둥이1, 3~4번은 업둥이2 먼저 배치<br>
+                                파티 내 플레이어 순서를 국룰대로 조합합니다.<br>(벞1234,메인딜4321)<br>혼합:1~2번은 업둥이1, 3~4번은 업둥이2 먼저 배치<br>정순:업둥이1 먼저배치 | 역순:업둥이2 먼저배치<br>
                                 <strong>몰빵 분배 시 이 옵션은 인원 분배(스케줄) 기준으로 사용됩니다.</strong>
                             </span>
                         </span>	
                     </div>
                     
                     <div id="updoongiePlacementContainer" class="mode-selector hidden" style="justify-content: flex-start; padding-left: 25px; margin-top: 10px; margin-bottom: 0;">
-                        <input type="radio" id="placement1" name="updoongiePlacement" value="1" checked>
+					
+                        <input type="radio" id="placementMixed" name="updoongiePlacement" value="mixed" checked>
+                        <label for="placementMixed">혼합</label>
+						
+                        <input type="radio" id="placement1" name="updoongiePlacement" value="1">
                         <label for="placement1">정순</label>
 
                         <input type="radio" id="placement2" name="updoongiePlacement" value="2">
                         <label for="placement2">역순</label>
 
-                        <!-- New Mixed Option Added Here -->
-                        <input type="radio" id="placementMixed" name="updoongiePlacement" value="mixed">
-                        <label for="placementMixed">혼합</label>
+
                     </div>
 
                     <div class="input-group" style="margin-top: 15px;">
