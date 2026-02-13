@@ -40,6 +40,10 @@
             /* Molppang Specific */
             --molppang-p1-border: #f59e0b; /* Gold/Amber */
             --molppang-p1-bg: #fffbeb;
+
+            /* Rest Cell Specific */
+            --rest-bg: #e2e8f0;
+            --rest-pattern-color: #cbd5e1;
         }
 
         body.dark-mode {
@@ -67,6 +71,9 @@
             
             --molppang-p1-border: #b45309;
             --molppang-p1-bg: #2a2010;
+
+            --rest-bg: #2d2d2d;
+            --rest-pattern-color: #3d3d3d;
         }
 
         body {
@@ -81,7 +88,7 @@
         }
 
         .main-container {
-            max-width: 1600px;
+            max-width: 1700px;
             margin: 0 auto;
             padding: 10px;
         }
@@ -436,6 +443,21 @@
         .role-updoongie2 { background-color: var(--updoongie2-bg); color: var(--updoongie2-text); font-weight: 500; }
         .role-buffer { background-color: var(--buffer-bg); color: var(--buffer-text); font-weight: 700; }
 
+        /* 4+2 Rest Cell */
+        .rest-cell {
+            background-color: var(--rest-bg);
+            background-image: repeating-linear-gradient(
+                45deg,
+                var(--rest-pattern-color) 0,
+                var(--rest-pattern-color) 1px,
+                transparent 0,
+                transparent 10px
+            );
+            color: var(--text-muted-color);
+            font-weight: 400;
+            user-select: none;
+        }
+
         .result-summary {
             display: flex;
             align-items: center;
@@ -731,13 +753,16 @@
                     <label style="margin-top: 15px;">참여 인원</label>
                     <div class="mode-selector">
                         <input type="radio" id="mode12" name="mode" value="12" checked>
-                        <label for="mode12">12인 공대</label>
+                        <label for="mode12">12인</label>
 
                         <input type="radio" id="mode8" name="mode" value="8">
-                        <label for="mode8">8인 공대</label>
+                        <label for="mode8">8인</label>
                         
                         <input type="radio" id="mode4" name="mode" value="4">
-                        <label for="mode4">4인 공대</label>
+                        <label for="mode4">4인</label>
+
+                        <input type="radio" id="mode4plus2" name="mode" value="4plus2">
+                        <label for="mode4plus2">4+2벞교</label>
                     </div>
 
                     <label for="excelData">엑셀 데이터 붙여넣기</label>
@@ -873,6 +898,28 @@
             }
             return array;
         }
+
+        // New Helper: Shuffle keeping Player 0 fixed at index 0 if present
+        function shuffleWithFixedLeader(array) {
+            // Check if Player 0 (id:0) is in this array
+            const leaderIndex = array.findIndex(p => p.id === 0);
+            if (leaderIndex === -1) {
+                return shuffle(array); // Normal shuffle for other parties
+            }
+            
+            // Move leader to front (Index 0)
+            if (leaderIndex !== 0) {
+                [array[0], array[leaderIndex]] = [array[leaderIndex], array[0]];
+            }
+            
+            // Shuffle the rest (indices 1 to length-1)
+            const rest = array.slice(1);
+            shuffle(rest);
+            
+            // Reconstruct: [Leader, ...ShuffledRest]
+            return [array[0], ...rest];
+        }
+
         function generateBaseLatinSquare(n) {
             const square = Array(n).fill(null).map(() => Array(n));
             for (let i = 0; i < n; i++) square[i][j] = (i + j) % n;
@@ -993,8 +1040,321 @@
             }
             return { synergy: totalDps * bufferPower, processedPlayers };
         }
+        
+        function getCombinations(array, size) {
+            const results = [];
+            function combine(startIndex, combination) {
+                if (combination.length === size) {
+                    results.push([...combination]);
+                    return;
+                }
+                for (let i = startIndex; i < array.length; i++) {
+                    combination.push(array[i]);
+                    combine(i + 1, combination);
+                    combination.pop();
+                }
+            }
+            combine(0, []);
+            return results;
+        }
 
-        // --- Molppang Specific Logic ---
+        // --- Main Execution Functions ---
+
+        function generateTeams() {
+            const statusDiv = document.getElementById('status');
+            const resultDiv = document.getElementById('resultOutput');
+            const distMode = document.querySelector('input[name="distMode"]:checked').value;
+            const molppangSubMode = document.querySelector('input[name="molppangSubMode"]:checked').value;
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            
+            document.getElementById('copyButton').style.display = 'none';
+            document.getElementById('ordering-controls').classList.add('hidden'); // Hide controls initially
+            statusDiv.className = 'status-info';
+            statusDiv.textContent = '최적 조합을 탐색 중입니다...';
+            resultDiv.innerHTML = '<div class="spinner"></div>';
+
+            // Gather Inputs
+            const useUpdoongBuffer = document.getElementById('useUpdoongBuffer').checked;
+            const standardParty = document.getElementById('standardParty').checked;
+            const updoongiePlacement = document.querySelector('input[name="updoongiePlacement"]:checked').value;
+            const optimizationStrategy = document.querySelector('input[name="optimizationStrategy"]:checked').value;
+            const updoongieCap = parseInt(document.getElementById('updoongieCap').value, 10);
+            const updoongieThreshold = parseInt(document.getElementById('updoongieThreshold').value, 10);
+            const useUpdoongieRatio = document.getElementById('useRatioValue').checked;
+            const updoongieBufferMultiplier = parseFloat(document.getElementById('updoongieBufferMultiplier').value);
+            
+            // Validation
+            if (useUpdoongBuffer) {
+                if ((!useUpdoongieRatio && isNaN(updoongieCap)) || isNaN(updoongieThreshold) || (useUpdoongieRatio && isNaN(updoongieBufferMultiplier))) {
+                    statusDiv.className = 'status-error';
+                    statusDiv.textContent = '오류: 입력값이 올바른지 확인해주세요.';
+                    resultDiv.innerHTML = '';
+                    return;
+                }
+            }
+
+            setTimeout(() => {
+                try {
+                    const excelData = document.getElementById('excelData').value;
+                    const numPlayers = (mode === '4plus2') ? 12 : parseInt(mode, 10);
+                    const players = parseData(excelData, numPlayers);
+                    const options = {
+                        updoongieCap, updoongieThreshold, useUpdoongieRatio,
+                        updoongieBufferMultiplier, useUpdoongBuffer, standardParty,
+                        updoongiePlacement, optimizationStrategy, distMode, molppangSubMode
+                    };
+                    
+                    if (mode === '4plus2') {
+                        findBest4Plus2Party(players, options);
+                    } else if (distMode === 'molppang') {
+                        if (numPlayers === 4) throw new Error("4인 공대는 몰빵 분배가 의미가 없습니다. (파티가 하나뿐임)");
+                        findBestMolppangParty(players, numPlayers / 4, options);
+                    } else {
+                        // Existing Logic
+                        if (numPlayers === 4) {
+                            generate4PlayerTeam(players, options);
+                        } else {
+                            runCombinationFinder(players, numPlayers / 4, options);
+                        }
+                    }
+                } catch (e) {
+                    statusDiv.className = 'status-error';
+                    statusDiv.textContent = `오류: ${e.message}`;
+                    resultDiv.innerHTML = '';
+                    console.error(e);
+                }
+            }, 50);
+        }
+
+        // --- 4+2 벞교 로직 (New) ---
+        function findBest4Plus2Party(players, options) {
+            const { updoongieCap, updoongieThreshold, useUpdoongieRatio, updoongieBufferMultiplier, useUpdoongBuffer, optimizationStrategy } = options;
+            const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
+            const placement1Schedule = [[3, 1, 1, 0], [1, 3, 0, 1], [2, 0, 3, 2], [0, 2, 2, 3]];
+            const placement2Schedule = [[3, 2, 2, 0], [2, 3, 0, 2], [1, 0, 3, 1], [0, 1, 1, 3]];
+            const placementMixedSchedule = [[3, 1, 2, 0], [1, 3, 0, 2], [2, 0, 3, 1], [0, 2, 1, 3]];
+
+            let activeSchedule;
+            if (options.updoongiePlacement === '1') activeSchedule = placement1Schedule;
+            else if (options.updoongiePlacement === '2') activeSchedule = placement2Schedule;
+            else activeSchedule = placementMixedSchedule;
+
+            // 1. 파티 분할 (12명 -> 3그룹)
+            const allPartitions = [];
+            function generate3Partitions(playersToPartition, currentPartitions) {
+                if (playersToPartition.length === 0) {
+                    allPartitions.push(currentPartitions);
+                    return;
+                }
+                const fixedPlayer = playersToPartition[0];
+                const remainingPlayers = playersToPartition.slice(1);
+                const groupCandidates = getCombinations(remainingPlayers, 3);
+                for (const group of groupCandidates) {
+                    const newParty = [fixedPlayer, ...group];
+                    const nextPlayersToPartition = remainingPlayers.filter(p => !group.includes(p));
+                    generate3Partitions(nextPlayersToPartition, [...currentPartitions, newParty]);
+                }
+            }
+            generate3Partitions(players, []);
+
+            let bestResult = null;
+            let maxMinSynergy = -Infinity;
+            let minStdDev = Infinity;
+            let checkedCount = 0;
+
+            const internalShuffleIterations = 20; // 셔플 반복 횟수
+
+            for (const baseParties of allPartitions) {
+                // 길드 중복 체크
+                if (!baseParties.every(party => new Set(party.map(p => p.guild)).size === 4)) continue;
+
+                for (let iter = 0; iter < internalShuffleIterations; iter++) {
+                    checkedCount++;
+                    // Changed shuffle to shuffleWithFixedLeader
+                    const currentParties = baseParties.map(party => shuffleWithFixedLeader([...party]));
+                    
+                    // 각 파티의 참여 스케줄 정의 (6공대)
+                    // P1: 1,2,3,4 (Active Indices: 0,1,2,3)
+                    // P2: 1,2,5,6 (Active Indices: 0,1,4,5)
+                    // P3: 3,4,5,6 (Active Indices: 2,3,4,5)
+                    
+                    // 각 파티의 4개 캐릭터 역할(schedule)을 6공대에 매핑
+                    const p1Map = {0:0, 1:1, 2:2, 3:3, 4:null, 5:null};
+                    const p2Map = {0:0, 1:1, 2:null, 3:null, 4:2, 5:3};
+                    const p3Map = {0:null, 1:null, 2:0, 3:1, 4:2, 5:3};
+                    
+                    const raidConfigs = [
+                        { raidIdx: 0, activeParties: [0, 1] }, // 1공대: P1, P2
+                        { raidIdx: 1, activeParties: [0, 1] }, // 2공대: P1, P2
+                        { raidIdx: 2, activeParties: [0, 2] }, // 3공대: P1, P3
+                        { raidIdx: 3, activeParties: [0, 2] }, // 4공대: P1, P3
+                        { raidIdx: 4, activeParties: [1, 2] }, // 5공대: P2, P3
+                        { raidIdx: 5, activeParties: [1, 2] }  // 6공대: P2, P3
+                    ];
+
+                    const allRaidSynergies = [];
+                    const detailedResults = Array(3).fill(null).map(() => Array(6).fill(null));
+                    let isValid = true;
+
+                    for (const config of raidConfigs) {
+                        const r = config.raidIdx;
+                        
+                        // 이 공대에 참여하는 2개 파티에 대해 계산
+                        for (const pIdx of config.activeParties) {
+                            let roleScheduleIdx;
+                            if (pIdx === 0) roleScheduleIdx = p1Map[r];
+                            else if (pIdx === 1) roleScheduleIdx = p2Map[r];
+                            else roleScheduleIdx = p3Map[r];
+                            
+                            const schedule = activeSchedule[roleScheduleIdx];
+                            const synergyResult = calculatePartySynergy(
+                                currentParties[pIdx], schedule, charRoles,
+                                updoongieCap, updoongieThreshold, updoongieBufferMultiplier, useUpdoongieRatio, useUpdoongBuffer
+                            );
+
+                            if (synergyResult.processedPlayers.filter(p => p.isModified).length > 1) { isValid = false; break; }
+                            if (synergyResult.processedPlayers.filter(p => p.isMuri).length > 1) { isValid = false; break; }
+
+                            allRaidSynergies.push(synergyResult.synergy);
+                            detailedResults[pIdx][r] = synergyResult.processedPlayers;
+                        }
+                        if (!isValid) break;
+                    }
+
+                    if (isValid) {
+                        const stats = calculateStats(allRaidSynergies);
+                        const minSynergy = Math.min(...allRaidSynergies);
+                        let isBest = false;
+
+                        if (optimizationStrategy === 'minStdDev') {
+                            if (stats.stdDev < minStdDev) isBest = true;
+                        } else {
+                            if (minSynergy > maxMinSynergy) isBest = true;
+                        }
+
+                        if (isBest) {
+                            maxMinSynergy = minSynergy;
+                            minStdDev = stats.stdDev;
+                            bestResult = {
+                                parties: currentParties,
+                                detailedResults, // [PartyIdx][RaidIdx]
+                                synergies: allRaidSynergies,
+                                stats: { ...stats, min: minSynergy, max: Math.max(...allRaidSynergies) },
+                                options
+                            };
+                        }
+                    }
+                }
+            }
+
+            if (bestResult) {
+                display4Plus2Results(bestResult, players);
+                document.getElementById('status').className = 'status-success';
+                document.getElementById('status').textContent = `4+2벞교 최적 조합 생성 완료! (유효 조합 ${checkedCount.toLocaleString()}개 확인)`;
+            } else {
+                throw new Error("유효한 조합을 찾을 수 없습니다. (무리 제한이나 모험단 중복 확인)");
+            }
+        }
+
+        function display4Plus2Results(result, allPlayers) {
+            const resultDiv = document.getElementById('resultOutput');
+            const { parties, detailedResults, synergies, stats, options } = result;
+            
+            // Layout: 
+            // P1: R1, R2, R3, R4 | R5, R6 (Rest)
+            // P2: R1, R2 | R3, R4 (Rest) | R5, R6
+            // P3: R1, R2 (Rest) | R3, R4, R5, R6
+            
+            let html = `<div class="result-summary">
+                <span><strong>4+2벞교 최적 결과</strong></span> &nbsp; | &nbsp;
+                <span><strong>최저:</strong> ${stats.min.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}</span>
+                <span><strong>평균:</strong> ${stats.avg.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}</span>
+                <span><strong>표준편차:</strong> ${stats.stdDev.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}</span>
+            </div>`;
+            
+            html += `<table><thead><tr>
+                <th>파티</th><th class="nickname-col">닉네임</th><th class="guild-col">모험단</th>
+                <th>1공대</th><th>2공대</th><th>3공대</th><th>4공대</th><th>5공대</th><th>6공대</th>
+            </tr></thead>`;
+            
+            parties.forEach((party, pIdx) => {
+                html += `<tbody class="party-group">`;
+                
+                // 내부 정렬: 1파티(pIdx 0)이고, Player 0이 있다면, Player 0을 무조건 맨 위로.
+                // 그 외에는 버퍼 등장 순서대로 정렬
+                const activeRaids = pIdx === 0 ? [0,1,2,3] : (pIdx === 1 ? [0,1,4,5] : [2,3,4,5]);
+                
+                const sortedParty = [...party].sort((a, b) => {
+                    // P0 fix logic
+                    if (a.id === 0) return -1;
+                    if (b.id === 0) return 1;
+
+                    const getBufferRaidIdx = (player) => {
+                         // 해당 플레이어가 버퍼인 레이드 인덱스 찾기
+                        for(const r of activeRaids) {
+                            if(detailedResults[pIdx][r]) {
+                                const pData = detailedResults[pIdx][r].find(d => d.player.id === player.id);
+                                if(pData && pData.role === '버퍼') return r;
+                            }
+                        }
+                        return 99;
+                    };
+                    return getBufferRaidIdx(a) - getBufferRaidIdx(b);
+                });
+
+                sortedParty.forEach((player, i) => {
+                    html += `<tr class="player-row">`;
+                    if (i === 0) html += `<td class="party-col party-header" rowspan="5">${pIdx + 1}파티</td>`;
+                    html += `<td class="nickname-col">${player.nickname}</td><td class="guild-col">${player.guild}</td>`;
+                    
+                    for (let r = 0; r < 6; r++) {
+                        const cellDataArray = detailedResults[pIdx][r];
+                        if (cellDataArray) {
+                            // Active Raid
+                            const cellData = cellDataArray.find(d => d.player.id === player.id);
+                             let cellContent = cellData.isModified ? Math.floor(cellData.displayValue).toLocaleString('ko-KR', { maximumFractionDigits: 0 }) : cellData.displayValue.toLocaleString('ko-KR', { maximumFractionDigits: 0 });
+                            if (cellData.isModified) { cellContent += ` <span style="font-size:0.85em; opacity: 0.8;">(${cellData.originalValue.toLocaleString('ko-KR', { maximumFractionDigits: 0 })})</span>`; }
+                            if (cellData.textSuffix) { cellContent += ` <span class="suffix-text">${cellData.textSuffix}</span>`; }
+                            
+                            let roleName = cellData.role === '딜러' ? '메인딜' : (cellData.role === '버퍼' ? '버퍼' : (cellData.role === '업둥이1' ? '업1' : '업2'));
+                            let badgeHtml = `<div class="role-badge no-copy">${roleName}</div>`;
+                            let muriBadge = cellData.isMuri ? `<span class="muri-badge no-copy">[무리]</span>` : '';
+
+                            html += `<td class="${cellData.roleClass}">${badgeHtml}${muriBadge}${cellContent}</td>`;
+                        } else {
+                            // Rest Raid
+                            html += `<td class="rest-cell">업둥이</td>`;
+                        }
+                    }
+                    html += `</tr>`;
+                });
+                
+                // Synergy Row
+                html += `<tr class="party-synergy-row"><td colspan="2" class="synergy-label">딜 * 버프력</td>`;
+                for(let r=0; r<6; r++) {
+                    if(detailedResults[pIdx][r]) {
+                         const playersInRaid = detailedResults[pIdx][r];
+                         const buffer = playersInRaid.find(p => p.role === '버퍼');
+                         const dealers = playersInRaid.filter(p => p.role !== '버퍼');
+                         const synergy = buffer.originalValue * dealers.reduce((acc, cur) => acc + cur.displayValue, 0);
+                         
+                         html += `<td>${synergy.toLocaleString('ko-KR', {maximumFractionDigits: 0})}</td>`;
+                    } else {
+                        html += `<td class="rest-cell">-</td>`;
+                    }
+                }
+                html += `</tr></tbody>`;
+            });
+            html += `</table>`;
+            
+            resultDiv.innerHTML = html;
+            const copyButton = document.getElementById('copyButton'); if(copyButton) copyButton.style.display = 'block';
+            document.getElementById('ordering-controls').classList.remove('hidden');
+            setupResultSelection();
+        }
+
+
+        // --- Molppang Algorithm ---
         function calculateMolppangSynergyForRaid(playersWithRoles, raidIndex, options) {
             // 1. Separate Buffers and DPS
             const buffers = [];
@@ -1024,6 +1384,19 @@
             // 2. Sort Descending
             buffers.sort((a, b) => b.player.chars['버퍼'].val - a.player.chars['버퍼'].val);
             dps.sort((a, b) => b.effectiveDps - a.effectiveDps);
+
+            // Constraint: Force Player 0 into Party 1 components if present
+            const p0Id = 0;
+            const p0BufferIdx = buffers.findIndex(p => p.player.id === p0Id);
+            if (p0BufferIdx > 0) {
+                 // Swap P0 to first position (Buffer for Party 1)
+                 [buffers[0], buffers[p0BufferIdx]] = [buffers[p0BufferIdx], buffers[0]];
+            }
+            const p0DpsIdx = dps.findIndex(p => p.player.id === p0Id);
+            if (p0DpsIdx > 2) { 
+                 // If P0 is DPS but not in top 3, swap with index 2 (3rd best) to force into P1
+                 [dps[2], dps[p0DpsIdx]] = [dps[p0DpsIdx], dps[2]];
+            }
 
             const parties = [];
             const numParties = buffers.length; // 2 for 8-man, 3 for 12-man
@@ -1133,90 +1506,6 @@
             return { parties: parties.sort((a,b) => a.partyId - b.partyId), isInvalid };
         }
 
-        function getCombinations(array, size) {
-            const results = [];
-            function combine(startIndex, combination) {
-                if (combination.length === size) {
-                    results.push([...combination]);
-                    return;
-                }
-                for (let i = startIndex; i < array.length; i++) {
-                    combination.push(array[i]);
-                    combine(i + 1, combination);
-                    combination.pop();
-                }
-            }
-            combine(0, []);
-            return results;
-        }
-
-        // --- Main Execution Functions ---
-
-        function generateTeams() {
-            const statusDiv = document.getElementById('status');
-            const resultDiv = document.getElementById('resultOutput');
-            const distMode = document.querySelector('input[name="distMode"]:checked').value;
-            const molppangSubMode = document.querySelector('input[name="molppangSubMode"]:checked').value;
-            const mode = document.querySelector('input[name="mode"]:checked').value;
-            
-            document.getElementById('copyButton').style.display = 'none';
-            document.getElementById('ordering-controls').classList.add('hidden'); // Hide controls initially
-            statusDiv.className = 'status-info';
-            statusDiv.textContent = '최적 조합을 탐색 중입니다...';
-            resultDiv.innerHTML = '<div class="spinner"></div>';
-
-            // Gather Inputs
-            const useUpdoongBuffer = document.getElementById('useUpdoongBuffer').checked;
-            const standardParty = document.getElementById('standardParty').checked;
-            const updoongiePlacement = document.querySelector('input[name="updoongiePlacement"]:checked').value;
-            const optimizationStrategy = document.querySelector('input[name="optimizationStrategy"]:checked').value;
-            const updoongieCap = parseInt(document.getElementById('updoongieCap').value, 10);
-            const updoongieThreshold = parseInt(document.getElementById('updoongieThreshold').value, 10);
-            const useUpdoongieRatio = document.getElementById('useRatioValue').checked;
-            const updoongieBufferMultiplier = parseFloat(document.getElementById('updoongieBufferMultiplier').value);
-            
-            // Validation
-            if (useUpdoongBuffer) {
-                if ((!useUpdoongieRatio && isNaN(updoongieCap)) || isNaN(updoongieThreshold) || (useUpdoongieRatio && isNaN(updoongieBufferMultiplier))) {
-                    statusDiv.className = 'status-error';
-                    statusDiv.textContent = '오류: 입력값이 올바른지 확인해주세요.';
-                    resultDiv.innerHTML = '';
-                    return;
-                }
-            }
-
-            setTimeout(() => {
-                try {
-                    const excelData = document.getElementById('excelData').value;
-                    const numPlayers = parseInt(mode, 10);
-                    const players = parseData(excelData, numPlayers);
-                    const options = {
-                        updoongieCap, updoongieThreshold, useUpdoongieRatio,
-                        updoongieBufferMultiplier, useUpdoongBuffer, standardParty,
-                        updoongiePlacement, optimizationStrategy, distMode, molppangSubMode
-                    };
-                    
-                    if (distMode === 'molppang') {
-                        if (numPlayers === 4) throw new Error("4인 공대는 몰빵 분배가 의미가 없습니다. (파티가 하나뿐임)");
-                        findBestMolppangParty(players, numPlayers / 4, options);
-                    } else {
-                        // Existing Logic
-                        if (numPlayers === 4) {
-                            generate4PlayerTeam(players, options);
-                        } else {
-                            runCombinationFinder(players, numPlayers / 4, options);
-                        }
-                    }
-                } catch (e) {
-                    statusDiv.className = 'status-error';
-                    statusDiv.textContent = `오류: ${e.message}`;
-                    resultDiv.innerHTML = '';
-                    console.error(e);
-                }
-            }, 50);
-        }
-
-        // --- Molppang Algorithm ---
         function findBestMolppangParty(players, numParties, options) {
             const charRoles = ['딜러', '업둥이1', '업둥이2', '버퍼'];
             const placement1Schedule = [[3, 1, 1, 0], [1, 3, 0, 1], [2, 0, 3, 2], [0, 2, 2, 3]]; // P1, P2, P3, P4
@@ -1262,7 +1551,6 @@
                     for (let g = 0; g < numParties; g++) {
                         const groupPlayers = partition[g];
                         const roleIndices = activeSchedule[r]; 
-                        // Fix: The loop should use the player index in group
                          groupPlayers.forEach((player, idxInGroup) => {
                             const roleIdx = roleIndices[idxInGroup];
                             const role = charRoles[roleIdx];
@@ -1479,7 +1767,8 @@
                 for (let iter = 0; iter < internalShuffleIterations; iter++) {
                     checkedCombinationsCount++;
                     // 각 파티 내부의 인원 순서를 랜덤하게 섞음 (스케줄 할당을 변경하는 효과)
-                    const currentParties = baseParties.map(party => shuffle([...party]));
+                    // shuffle 대신 shuffleWithFixedLeader 사용
+                    const currentParties = baseParties.map(party => shuffleWithFixedLeader([...party]));
 
                     const allRaidSynergies = [];
                     const currentDetailedRaidPlayerResults = [];
@@ -1571,6 +1860,12 @@
                 const newParties = JSON.parse(JSON.stringify(parties)); if (numParties < 2) return newParties;
                 let pIdx1 = Math.floor(Math.random() * numParties); let pIdx2 = (pIdx1 + 1 + Math.floor(Math.random() * (numParties - 1))) % numParties;
                 const player1 = Math.floor(Math.random() * 4); const player2 = Math.floor(Math.random() * 4);
+                
+                // CONSTRAINT: Do not swap if it moves Player 0 from Party 0 Slot 0
+                // Assuming P0 is initially at [0][0]
+                if (pIdx1 === 0 && player1 === 0) return null;
+                if (pIdx2 === 0 && player2 === 0) return null;
+                
                 [newParties[pIdx1][player1], newParties[pIdx2][player2]] = [newParties[pIdx2][player2], newParties[pIdx1][player1]];
                 return newParties;
             }
@@ -1578,14 +1873,19 @@
 
             let currentSolution;
             for (let i = 0; i < 5000; i++) {
-                const shuffledPlayers = shuffle([...players]); currentSolution = [];
+                const shuffledPlayers = shuffle([...players]); 
+                // Force P0 to Index 0
+                const p0Idx = shuffledPlayers.findIndex(p => p.id === 0);
+                if(p0Idx !== 0) [shuffledPlayers[0], shuffledPlayers[p0Idx]] = [shuffledPlayers[p0Idx], shuffledPlayers[0]];
+                
+                currentSolution = [];
                 for (let j = 0; j < numParties; j++) currentSolution.push(shuffledPlayers.slice(j * 4, (j + 1) * 4));
                 if (isCompositionValid(currentSolution)) break; if (i === 4999) throw new Error(`유효한 초기 파티 조합을 찾을 수 없습니다.`);
             }
             let bestSolution = JSON.parse(JSON.stringify(currentSolution)); const scheduleIterationsSA = 800;
             let currentEnergy = calculateCompositionEnergy(currentSolution, scheduleIterationsSA); let bestEnergy = currentEnergy; let temp = 10000.0; const coolingRate = 0.995;
             while (temp > 1.0) {
-                let newSolution; for (let i = 0; i < 100; i++) { newSolution = createNeighbor(currentSolution); if (isCompositionValid(newSolution)) break; newSolution = null; }
+                let newSolution; for (let i = 0; i < 100; i++) { newSolution = createNeighbor(currentSolution); if (newSolution && isCompositionValid(newSolution)) break; newSolution = null; }
                 if (!newSolution) { temp *= coolingRate; continue; }
                 const newEnergy = calculateCompositionEnergy(newSolution, scheduleIterationsSA);
                 if (newEnergy < currentEnergy || Math.exp((currentEnergy - newEnergy) / temp) > Math.random()) { currentSolution = newSolution; currentEnergy = newEnergy; }
@@ -1692,6 +1992,10 @@
                 
                 // 버퍼 역할을 수행하는 공대 차수(r) 순서대로 정렬
                 const sortedParty = [...party].sort((a, b) => {
+                    // P0 fix logic
+                    if (a.id === 0) return -1;
+                    if (b.id === 0) return 1;
+
                     const idxA = party.indexOf(a);
                     const idxB = party.indexOf(b);
                     let raidA = 0, raidB = 0;
@@ -1994,7 +2298,7 @@ function copyResultsToClipboard() {
                 radio.addEventListener('change', (e) => {
                     let placeholderText = "";
                     const value = e.target.value;
-                    if (value === '12') placeholderText = "엑셀에서 '닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요. (딜러 순서 무관: 자동 정렬됨)";
+                    if (value === '12' || value === '4plus2') placeholderText = "엑셀에서 '닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요. (딜러 순서 무관: 자동 정렬됨)";
                     else if (value === '8') placeholderText = "엑셀에서 '닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼' 순서의 8줄 데이터를 복사하여 여기에 붙여넣으세요. (딜러 순서 무관: 자동 정렬됨)";
                     else placeholderText = "엑셀에서 '닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼' 순서의 4줄 데이터를 복사하여 여기에 붙여넣으세요. (딜러 순서 무관: 자동 정렬됨)";
                     document.getElementById('excelData').placeholder = placeholderText;
@@ -2004,7 +2308,7 @@ function copyResultsToClipboard() {
             const currentMode = document.querySelector('input[name="mode"]:checked').value;
             if (currentMode) {
                  let placeholderText = "";
-                 if (currentMode === '12') placeholderText = "엑셀에서 '닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요. (딜러 순서 무관: 자동 정렬됨)";
+                 if (currentMode === '12' || currentMode === '4plus2') placeholderText = "엑셀에서 '닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼' 순서의 12줄 데이터를 복사하여 여기에 붙여넣으세요. (딜러 순서 무관: 자동 정렬됨)";
                  else if (currentMode === '8') placeholderText = "엑셀에서 '닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼' 순서의 8줄 데이터를 복사하여 여기에 붙여넣으세요. (딜러 순서 무관: 자동 정렬됨)";
                  else placeholderText = "엑셀에서 '닉네임, 모험단, 딜러1, 딜러2, 딜러3, 버퍼' 순서의 4줄 데이터를 복사하여 여기에 붙여넣으세요. (딜러 순서 무관: 자동 정렬됨)";
                  document.getElementById('excelData').placeholder = placeholderText;
@@ -2021,16 +2325,33 @@ function copyResultsToClipboard() {
             const updoongiePlacementContainer = document.getElementById('updoongiePlacementContainer');
             const molppangSubOptions = document.getElementById('molppangSubOptions');
             const distRadios = document.querySelectorAll('input[name="distMode"]');
+            const modeRadios = document.querySelectorAll('input[name="mode"]');
             
             function updateControls() {
                 const isMolppang = document.getElementById('distMolppang').checked;
                 const isStandard = standardPartyCheckbox.checked;
+                const currentMode = document.querySelector('input[name="mode"]:checked').value;
+                const is4Plus2 = currentMode === '4plus2';
 
-                if (isMolppang) {
+                // 4+2 모드는 몰빵 모드와 양립 불가 (UI적으로 강제)
+                if (is4Plus2) {
+                    document.getElementById('distEqual').checked = true;
+                    document.getElementById('distMolppang').disabled = true;
+                    standardPartyCheckbox.checked = true; // 4+2는 무조건 국룰 분배 로직 따름
+                    standardPartyCheckbox.disabled = true;
+                } else {
+                    document.getElementById('distMolppang').disabled = false;
+                    // standardPartyCheckbox.disabled = false; // 아래 로직에서 다시 처리됨
+                }
+
+                if (isMolppang && !is4Plus2) {
                     standardPartyCheckbox.checked = true;
                     standardPartyCheckbox.disabled = true;
                     updoongiePlacementContainer.classList.remove('hidden');
                     molppangSubOptions.classList.remove('hidden');
+                } else if (is4Plus2) {
+                    updoongiePlacementContainer.classList.remove('hidden'); // 4+2도 순서 옵션 사용
+                    molppangSubOptions.classList.add('hidden');
                 } else {
                     standardPartyCheckbox.disabled = false;
                     updoongiePlacementContainer.classList.toggle('hidden', !isStandard);
@@ -2039,6 +2360,7 @@ function copyResultsToClipboard() {
             }
 
             distRadios.forEach(r => r.addEventListener('change', updateControls));
+            modeRadios.forEach(r => r.addEventListener('change', updateControls));
             standardPartyCheckbox.addEventListener('change', updateControls);
             updateControls();
 
@@ -2071,7 +2393,7 @@ function copyResultsToClipboard() {
 
             const COLS = 6;
             const ROWS = 12; // 12 editable rows
-            const fixedHeaders = ['닉네임', '모험단', '메인딜', '업둥이1', '업둥이2', '버퍼'];
+            const fixedHeaders = ['닉네임', '모험단', '딜1', '딜2', '딜3', '버퍼'];
 
             let table = document.createElement('table');
             table.className = 'memo-pad-table';
