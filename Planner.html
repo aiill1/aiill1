@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="ko" class=""> <!-- 다크모드 초기 클래스 적용을 위해 비워둠 -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파티 플래너</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // 다크 모드 활성화 (클래스 기반)
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2c3e50',
+                        'primary-hover': '#34495e',
+                        // 다크 모드용 색상 확장
+                        'dark-bg': '#18181b',      // zinc-900 main background
+                        'dark-surface': '#27272a', // zinc-800 card background
+                        'dark-border': '#3f3f46',  // zinc-700 borders
+                        'dark-text': '#e4e4e7',    // zinc-200 main text
+                        'dark-text-muted': '#a1a1aa', // zinc-400 muted text
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            /* 기본 배경 및 텍스트 색상을 Tailwind 클래스로 제어하기 위해 제거 */
+            /* background-color: #f4f4f5; color: #2c3e50; */
+        }
+        /* Tailwind 유틸리티로 대체되거나 다크모드 대응이 필요 없는 CSS는 유지 */
+        .card {
+            /* background: white; border: 1px solid #e4e4e7; */
+            border-radius: 12px;
+        }
+        .char-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            /* border: 1px solid #f4f4f5; Tailwind로 이동 */
+        }
+        /* 클리어 상태 (라이트/다크 모드 대응) */
+        .char-card.cleared {
+            /* !important 제거하고 Tailwind 유틸리티 우선순위 활용 */
+            background-color: #ecfdf5; /* emerald-50 */
+            border-color: #a7f3d0;     /* emerald-200 */
+            color: #065f46;            /* emerald-800 */
+        }
+        /* 다크모드에서의 클리어 상태 */
+        .dark .char-card.cleared {
+             background-color: rgba(6, 95, 70, 0.2); /* emerald-800 / 20% */
+             border-color: #065f46;                  /* emerald-800 */
+             color: #d1fae5;                         /* emerald-100 */
+        }
+
+        .set-card {
+            /* background: #fafafa; border: 1px solid #e4e4e7; Tailwind로 이동 */
+            border-radius: 10px;
+        }
+        .set-card.cleared {
+            background-color: #ecfdf5;
+            border-color: #a7f3d0;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .dark .set-card.cleared {
+            background-color: rgba(6, 95, 70, 0.2);
+            border-color: #065f46;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .status-bar-bg {
+            height: 10px;
+            background: #e4e4e7;
+            border-radius: 5px;
+        }
+        .dark .status-bar-bg { background: #3f3f46; } /* zinc-700 */
+
+        .status-bar-fill {
+            height: 100%;
+            background: #34d399;
+            border-radius: 5px;
+            transition: width 0.4s ease;
+        }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #4b5563; } /* gray-600 */
+        
+        .modal {
+            background: rgba(0,0,0,0.6);
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal.active { display: flex; }
+
+        .editing-char-box {
+            background: #fdf2f2;
+            border: 2px solid #ef4444 !important;
+        }
+        .dark .editing-char-box {
+             background: rgba(127, 29, 29, 0.2); /* red-900 / 20% */
+             border-color: #991b1b !important; /* red-800 */
+        }
+
+        .tab-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .move-btn {
+            padding: 4px;
+            border-radius: 6px;
+            transition: background 0.2s;
+            display: none;
+        }
+        .tab-active .move-btn {
+            display: flex;
+        }
+        .move-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .tab-inactive .move-btn {
+            display: none;
+        }
+        
+        /* 다크모드 토글 스위치 스타일 */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #34d399; /* emerald-400 */
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #34d399; /* emerald-400 */
+        }
+        #toggle-switch-dot {
+             transition: transform 0.3s ease-in-out;
+        }
+        .dark #toggle-switch-dot {
+            transform: translateX(100%);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 bg-[#f4f4f5] dark:bg-dark-bg text-primary dark:text-dark-text transition-colors duration-200">
+
+    <div id="app" class="max-w-[1800px] mx-auto">
+<!-- 상단 바 -->
+<!-- ▼▼▼ 추가된 내비게이션 링크 ▼▼▼ -->
+<div class="mb-4">
+    <a href="index.html" class="inline-flex items-center text-sm font-bold text-zinc-500 dark:text-zinc-400 hover:text-primary dark:hover:text-dark-text transition group">
+        <svg class="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        메인으로 이동
+    </a>
+</div>
+<!-- ▲▲▲ 여기까지 ▲▲▲ -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+    <div> <!-- 좌측 영역: 클래스 단순화 -->
+        <h1 class="text-3xl font-bold tracking-tight text-primary dark:text-dark-text">파티 플래너</h1>
+        <p class="text-base text-zinc-500 dark:text-dark-text-muted mt-1">컨텐츠별 캐릭터 배치 및 클리어 현황 관리</p>
+    </div>
+    <!-- 우측 영역: items-center 추가 -->
+    <div class="flex items-center gap-3">
+        <!-- ▼▼▼ 버튼을 여기로 옮기고 ml-4 클래스 제거 ▼▼▼ -->
+        <button onclick="toggleDarkMode()" aria-label="다크 모드 토글" class="relative inline-flex h-8 w-14 items-center rounded-full bg-zinc-300 dark:bg-zinc-600 transition-colors focus:outline-none shadow-inner">
+            <span id="toggle-switch-dot" class="inline-block h-6 w-6 transform rounded-full bg-white dark:bg-zinc-200 shadow transition-transform duration-300 ease-in-out translate-x-1 flex items-center justify-center">
+                <svg class="w-4 h-4 text-amber-500 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <svg class="w-4 h-4 text-indigo-400 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            </span>
+        </button>
+        <!-- ▲▲▲ 여기까지 ▲▲▲ -->
+
+        <button onclick="downloadBackup()" class="px-4 py-2.5 text-sm font-semibold border border-zinc-200 dark:border-dark-border rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition shadow-sm bg-white dark:bg-dark-surface text-primary dark:text-dark-text">데이터 백업</button>
+        
+        <button onclick="confirmLoadData()" class="px-4 py-2.5 text-sm font-semibold border border-zinc-200 dark:border-dark-border rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition shadow-sm cursor-pointer bg-white dark:bg-dark-surface text-primary dark:text-dark-text">
+            데이터 로드
+        </button>
+        <input type="file" id="load-file" class="hidden" accept=".json" onchange="handleFileLoad(event)">
+    </div>
+</div>
+
+        <!-- 전체 대시보드 -->
+        <section class="card p-6 mb-10 shadow-sm bg-white dark:bg-dark-surface border border-zinc-200 dark:border-dark-border">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-base font-bold uppercase tracking-widest text-zinc-400 dark:text-dark-text-muted">전체 컨텐츠 클리어 현황</h2>
+                <button onclick="confirmResetAll()" class="text-sm font-bold text-red-500 hover:text-red-700 dark:hover:text-red-400 transition">모든 클리어 초기화</button>
+            </div>
+            <div id="dashboard-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6"></div>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- 사이드바: 캐릭터 관리 -->
+            <aside class="lg:col-span-5 xl:col-span-4">
+                <div class="card p-6 shadow-sm bg-white dark:bg-dark-surface border border-zinc-200 dark:border-dark-border">
+                    <h3 class="font-bold text-lg mb-4 border-b dark:border-dark-border pb-3 text-primary dark:text-dark-text">캐릭터 관리</h3>
+                    
+                    <!-- 캐릭터 등록 폼 -->
+                    <div class="space-y-3 mb-8 bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-xl border border-zinc-100 dark:border-dark-border">
+                        <div class="flex gap-2">
+                            <input id="char-name" type="text" placeholder="닉네임" class="w-full border dark:border-dark-border rounded-lg px-4 py-3 text-base outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-600 text-primary dark:text-dark-text bg-white dark:bg-dark-surface">
+                        </div>
+                        <div class="flex gap-2">
+                            <input id="char-stat" type="number" placeholder="수치" class="w-1/2 border dark:border-dark-border rounded-lg px-4 py-3 text-base outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-600 text-primary dark:text-dark-text bg-white dark:bg-dark-surface">
+                            <input id="char-note" type="text" placeholder="메모" class="w-1/2 border dark:border-dark-border rounded-lg px-4 py-3 text-base outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-600 text-primary dark:text-dark-text bg-white dark:bg-dark-surface">
+                        </div>
+                        <div>
+                            <select id="char-type" class="w-full border dark:border-dark-border rounded-lg px-3 py-3 text-base bg-white dark:bg-dark-surface outline-none text-primary dark:text-dark-text">
+                                <option value="dealer">딜러</option>
+                                <option value="buffer">버퍼</option>
+                            </select>
+                        </div>
+                        <button onclick="addCharacter()" class="w-full bg-primary dark:bg-zinc-700 text-white py-3.5 rounded-lg text-base font-bold hover:bg-primary-hover dark:hover:bg-zinc-600 transition">새 캐릭터 등록</button>
+                    </div>
+
+                    <!-- 정렬 컨트롤 추가 -->
+                    <div class="flex justify-end items-center mb-4">
+                        <select id="sort-select" onchange="changeSortMethod(this.value)" class="border dark:border-dark-border rounded-lg px-3 py-2 text-sm bg-white dark:bg-dark-surface outline-none text-primary dark:text-dark-text cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700">
+                            <option value="desc">수치 내림차순</option>
+                            <option value="asc">수치 오름차순</option>
+                            <option value="name">이름순</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col">
+                            <h4 class="text-xs font-black text-zinc-400 dark:text-dark-text-muted mb-3 uppercase tracking-widest flex items-center gap-2">
+                                <span class="w-2 h-2 bg-primary dark:bg-zinc-400 rounded-full"></span> 딜러
+                            </h4>
+                            <div id="dealer-list" class="space-y-2 max-h-[500px] overflow-y-auto pr-1"></div>
+                        </div>
+                        <div class="flex flex-col">
+                            <h4 class="text-xs font-black text-emerald-500 dark:text-emerald-400 mb-3 uppercase tracking-widest flex items-center gap-2">
+                                <span class="w-2 h-2 bg-emerald-500 rounded-full"></span> 버퍼
+                            </h4>
+                            <div id="buffer-list" class="space-y-2 max-h-[500px] overflow-y-auto pr-1"></div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 메인: 컨텐츠 영역 -->
+            <main class="lg:col-span-7 xl:col-span-8">
+                <div class="card p-8 shadow-sm h-full bg-white dark:bg-dark-surface border border-zinc-200 dark:border-dark-border">
+                    <div class="flex flex-wrap items-center gap-3 mb-8 border-b dark:border-dark-border pb-6">
+                        <!-- 컨텐츠 탭 컨테이너 -->
+                        <div id="content-tabs" class="flex flex-wrap gap-2.5"></div>
+                        
+                        <div class="flex items-center gap-2 ml-auto">
+                            <input id="new-content-name" type="text" placeholder="새 컨텐츠" class="border dark:border-dark-border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-zinc-100 dark:focus:ring-zinc-600 outline-none w-32 bg-white dark:bg-dark-surface dark:text-dark-text">
+                            <button onclick="addContent()" class="bg-zinc-100 dark:bg-zinc-700 text-primary dark:text-dark-text px-4 py-2 rounded-lg text-sm font-bold hover:bg-zinc-200 dark:hover:bg-zinc-600 transition">추가</button>
+                        </div>
+                    </div>
+
+                    <div id="active-content-area">
+                        <div class="flex justify-between items-start mb-8">
+                            <div>
+                                <h2 id="current-content-title" class="text-3xl font-bold text-primary dark:text-dark-text tracking-tight"></h2>
+                                <div id="content-edit-tools" class="flex gap-4 mt-2 hidden">
+                                    <button onclick="renameContent()" class="text-sm text-zinc-400 dark:text-dark-text-muted hover:text-primary dark:hover:text-dark-text transition underline underline-offset-4">컨텐츠 이름 변경</button>
+                                    <button onclick="deleteContent()" class="text-sm text-red-300 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300 transition underline underline-offset-4">컨텐츠 삭제</button>
+                                </div>
+                            </div>
+                            <div id="party-controls" class="flex gap-3 hidden">
+                                <button id="edit-mode-btn" onclick="toggleEditMode()" class="px-5 py-2 border dark:border-dark-border rounded-lg text-sm font-bold transition shadow-sm bg-white dark:bg-dark-surface hover:bg-zinc-50 dark:hover:bg-zinc-700 text-primary dark:text-dark-text">수정 모드</button>
+                                <button onclick="openAddSetModal()" class="px-5 py-2 border dark:border-dark-border rounded-lg text-sm font-bold transition shadow-sm bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-primary dark:text-dark-text">세트 추가</button>
+                                <button onclick="openAddCharModal()" class="bg-primary dark:bg-zinc-600 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-primary-hover dark:hover:bg-zinc-500 transition shadow-sm">캐릭터 추가</button>
+                            </div>
+                        </div>
+
+                        <!-- 세트 영역 -->
+                        <div id="content-sets-container" class="mb-10 hidden">
+                            <h3 class="text-xs font-bold text-zinc-400 dark:text-dark-text-muted mb-4 flex items-center gap-2 uppercase tracking-widest">
+                                <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span> 세트(파티) 구성
+                            </h3>
+                            <div id="sets-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                        </div>
+
+                        <!-- 캐릭터 영역 -->
+                        <div id="content-grid-container" class="grid grid-cols-1 md:grid-cols-2 gap-8 hidden">
+                            <div>
+                                <h3 class="text-xs font-bold text-zinc-400 dark:text-dark-text-muted mb-4 flex items-center gap-2 uppercase tracking-widest">
+                                    <span class="w-1.5 h-1.5 bg-primary dark:bg-zinc-400 rounded-full"></span> 딜러
+                                </h3>
+                                <div id="dealer-grid" class="flex flex-col gap-2"></div>
+                            </div>
+                            <div>
+                                <h3 class="text-xs font-bold text-zinc-400 dark:text-dark-text-muted mb-4 flex items-center gap-2 uppercase tracking-widest">
+                                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> 버퍼
+                                </h3>
+                                <div id="buffer-grid" class="flex flex-col gap-2"></div>
+                            </div>
+                        </div>
+
+                        <div id="empty-content-msg" class="py-24 text-center text-zinc-400 dark:text-dark-text-muted text-lg">
+                            관리할 컨텐츠를 선택하거나 새로 생성하세요.
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 캐릭터 일괄 추가 모달 -->
+    <div id="add-char-modal" class="modal">
+        <div class="bg-white dark:bg-dark-surface p-8 rounded-2xl shadow-2xl max-w-4xl w-full mx-4 border dark:border-dark-border">
+            <h4 class="font-bold text-2xl mb-6 text-primary dark:text-dark-text">컨텐츠 캐릭터 추가</h4>
+            <div class="grid grid-cols-2 gap-6 mb-8">
+                <div class="flex flex-col border-r dark:border-dark-border pr-6">
+                    <h5 class="text-sm font-black text-zinc-400 dark:text-dark-text-muted mb-4 uppercase tracking-widest">딜러 목록</h5>
+                    <div id="modal-dealer-list" class="max-h-[400px] overflow-y-auto space-y-2 pr-2"></div>
+                </div>
+                <div class="flex flex-col">
+                    <h5 class="text-sm font-black text-emerald-500 dark:text-emerald-400 mb-4 uppercase tracking-widest">버퍼 목록</h5>
+                    <div id="modal-buffer-list" class="max-h-[400px] overflow-y-auto space-y-2 pr-2"></div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 pt-4 border-t dark:border-dark-border">
+                <button onclick="closeAddCharModal()" class="px-6 py-3 text-sm font-bold border dark:border-dark-border rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-700 transition text-primary dark:text-dark-text">닫기</button>
+                <button onclick="submitMultiAdd()" class="px-6 py-3 text-sm font-bold bg-primary dark:bg-zinc-600 text-white rounded-xl hover:bg-primary-hover dark:hover:bg-zinc-500 transition">선택한 캐릭터 추가</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 세트 추가 모달 -->
+    <div id="add-set-modal" class="modal">
+        <div class="bg-white dark:bg-dark-surface p-8 rounded-2xl shadow-2xl max-w-4xl w-full mx-4 border dark:border-dark-border">
+            <h4 class="font-bold text-2xl mb-4 text-primary dark:text-dark-text">새 세트(파티) 구성</h4>
+            <p class="text-sm text-zinc-500 dark:text-dark-text-muted mb-6">해당 컨텐츠에 포함된 캐릭터 중 원하는 인원을 선택하여 세트를 만듭니다.</p>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-bold mb-2 text-primary dark:text-dark-text">세트 이름 (비워두면 자동 생성)</label>
+                <input id="new-set-name" type="text" placeholder="예: 1군, 업둥벞교" class="w-full border dark:border-dark-border rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-600 bg-white dark:bg-dark-surface dark:text-dark-text">
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 mb-8">
+                <div>
+                    <label class="block text-xs font-bold text-zinc-400 dark:text-dark-text-muted mb-3 uppercase tracking-widest">딜러 선택</label>
+                    <div id="set-dealer-selection" class="max-h-[300px] overflow-y-auto space-y-2 border dark:border-dark-border rounded-lg p-4 bg-zinc-50 dark:bg-zinc-800/50"></div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-emerald-500 dark:text-emerald-400 mb-3 uppercase tracking-widest">버퍼 선택</label>
+                    <div id="set-buffer-selection" class="max-h-[300px] overflow-y-auto space-y-2 border dark:border-dark-border rounded-lg p-4 bg-zinc-50 dark:bg-zinc-800/50"></div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t dark:border-dark-border">
+                <button onclick="closeAddSetModal()" class="px-6 py-3 text-sm font-bold border dark:border-dark-border rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-700 transition text-primary dark:text-dark-text">취소</button>
+                <button onclick="submitAddSet()" class="px-6 py-3 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">세트 생성</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let state = { 
+            characters: [], 
+            contents: [], 
+            activeContentId: null, 
+            isEditMode: false, 
+            editingCharId: null,
+            sortMethod: 'desc',
+            darkMode: false // 다크모드 상태 추가
+        };
+
+        function init() {
+            const saved = localStorage.getItem('party_data_v6');
+            if (saved) { 
+                state = { ...state, ...JSON.parse(saved) };
+                state.isEditMode = false;
+                state.contents.forEach(c => { if(!c.sets) c.sets = []; });
+                if (!state.sortMethod) state.sortMethod = 'desc';
+                // 저장된 다크모드 상태가 없으면 기본값 false
+                if (state.darkMode === undefined) state.darkMode = false;
+            }
+            document.getElementById('sort-select').value = state.sortMethod;
+            
+            // 초기 로드 시 다크모드 적용
+            applyDarkMode();
+            render();
+        }
+
+        function save() {
+            localStorage.setItem('party_data_v6', JSON.stringify(state));
+            // 저장 시 렌더링은 선택사항 (상태 변경 시 이미 렌더링 되므로)
+            // render(); 
+        }
+
+        // 다크모드 토글 함수
+        function toggleDarkMode() {
+            state.darkMode = !state.darkMode;
+            applyDarkMode();
+            save(); // 상태 저장
+        }
+
+        // 다크모드 적용 함수 (DOM 조작)
+        function applyDarkMode() {
+            if (state.darkMode) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        // 캐릭터 관리 기능
+        function addCharacter() {
+            const nameInput = document.getElementById('char-name');
+            const statInput = document.getElementById('char-stat');
+            const noteInput = document.getElementById('char-note');
+            
+            const name = nameInput.value.trim();
+            const stat = statInput.value.trim();
+            const note = noteInput.value.trim();
+            const type = document.getElementById('char-type').value;
+            
+            if (!name || !stat) return;
+            if (state.characters.some(c => c.name === name)) return alert('중복된 닉네임입니다.');
+            
+            state.characters.push({ id: 'char_' + Date.now(), name, stat: parseInt(stat), note, type });
+            nameInput.value = ''; statInput.value = ''; noteInput.value = '';
+            save();
+            render(); // 저장 후 렌더링 추가
+        }
+
+        function startInlineEdit(id) {
+            state.editingCharId = id;
+            renderCharacters();
+        }
+
+        function cancelInlineEdit() {
+            state.editingCharId = null;
+            renderCharacters();
+        }
+
+        function submitInlineEdit(id) {
+            const char = state.characters.find(c => c.id === id);
+            const name = document.getElementById(`edit-name-${id}`).value.trim();
+            const stat = document.getElementById(`edit-stat-${id}`).value.trim();
+            const note = document.getElementById(`edit-note-${id}`).value.trim();
+            const type = document.getElementById(`edit-type-${id}`).value;
+
+            if (!name || !stat) return;
+            char.name = name;
+            char.stat = parseInt(stat);
+            char.note = note;
+            char.type = type;
+            state.editingCharId = null;
+            save();
+            render(); // 저장 후 렌더링 추가
+        }
+
+        function deleteCharacter(id) {
+            if(!confirm('전체 목록에서 이 캐릭터를 삭제하시겠습니까? 관련 세트에서도 제외됩니다.')) return;
+            state.characters = state.characters.filter(c => c.id !== id);
+            state.contents.forEach(ct => {
+                ct.contentCharacters = ct.contentCharacters.filter(cc => cc.charId !== id);
+                if (ct.sets) {
+                    ct.sets.forEach(s => {
+                        s.charIds = s.charIds.filter(cid => cid !== id);
+                    });
+                }
+            });
+            save();
+            render(); // 저장 후 렌더링 추가
+        }
+
+        // 정렬 변경 함수
+        function changeSortMethod(method) {
+            state.sortMethod = method;
+            save();
+            render(); // 저장 후 렌더링 추가
+        }
+
+        // 정렬된 캐릭터 목록 가져오기
+        function getSortedCharacters() {
+            const chars = [...state.characters];
+            switch (state.sortMethod) {
+                case 'asc':
+                    return chars.sort((a, b) => a.stat - b.stat);
+                case 'name':
+                    return chars.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+                case 'desc':
+                default:
+                    return chars.sort((a, b) => b.stat - a.stat);
+            }
+        }
+
+        // 컨텐츠 관리 기능
+        function addContent() {
+            const name = document.getElementById('new-content-name').value.trim();
+            if (!name) return;
+            const id = 'cont_' + Date.now();
+            state.contents.push({ id, name, contentCharacters: [], sets: [] });
+            state.activeContentId = id;
+            document.getElementById('new-content-name').value = '';
+            save();
+            render(); // 저장 후 렌더링 추가
+        }
+
+        function deleteContent() {
+            if (!state.activeContentId) return;
+            const content = state.contents.find(c => c.id === state.activeContentId);
+            if (!content) return;
+            if (!confirm(`'${content.name}' 컨텐츠를 삭제하시겠습니까?`)) return;
+            
+            state.contents = state.contents.filter(c => c.id !== state.activeContentId);
+            state.activeContentId = state.contents.length > 0 ? state.contents[0].id : null;
+            save();
+            render(); // 저장 후 렌더링 추가
+        }
+
+        function renameContent() {
+            const content = state.contents.find(c => c.id === state.activeContentId);
+            if (!content) return;
+            const newName = prompt('수정할 이름을 입력하세요', content.name);
+            if (newName && newName.trim()) { 
+                content.name = newName.trim(); 
+                save();
+                render(); // 저장 후 렌더링 추가
+            }
+        }
+
+        // 컨텐츠 순서 변경 기능
+        function moveContent(direction) {
+            if (!state.activeContentId) return;
+            const index = state.contents.findIndex(c => c.id === state.activeContentId);
+            if (index === -1) return;
+
+            const targetIndex = index + direction;
+            if (targetIndex < 0 || targetIndex >= state.contents.length) return;
+
+            const temp = state.contents[index];
+            state.contents[index] = state.contents[targetIndex];
+            state.contents[targetIndex] = temp;
+            save();
+            render(); // 저장 후 렌더링 추가
+        }
+
+        // 클리어 토글
+        function toggleCharClear(charId) {
+            if (state.isEditMode) return;
+            const content = state.contents.find(c => c.id === state.activeContentId);
+            if (!content) return;
+            const cc = content.contentCharacters.find(cc => cc.charId === charId);
+            if (cc) { 
+                cc.isCleared = !cc.isCleared; 
+                save();
+                renderContentArea(); // 부분 렌더링
+                renderDashboard(); // 대시보드 업데이트
+            }
+        }
+
+        function toggleSetClear(setId) {
+            if (state.isEditMode) return;
+            const content = state.contents.find(c => c.id === state.activeContentId);
+            if (!content) return;
+            const set = content.sets.find(s => s.id === setId);
+            if (!set) return;
+
+            const members = content.contentCharacters.filter(cc => set.charIds.includes(cc.charId));
+            const allCleared = members.length > 0 && members.every(m => m.isCleared);
+            
+            members.forEach(m => m.isCleared = !allCleared);
+            save();
+            renderContentArea(); // 부분 렌더링
+            renderDashboard(); // 대시보드 업데이트
+        }
+
+        function toggleEditMode() { 
+            state.isEditMode = !state.isEditMode; 
+            renderContentArea(); // 부분 렌더링
+        }
+
+        // 모달 관리
+        function openAddCharModal() {
+            const content = state.contents.find(c => c.id === state.activeContentId);
+            if (!content) return;
+            const mD = document.getElementById('modal-dealer-list');
+            const mB = document.getElementById('modal-buffer-list');
+            mD.innerHTML = ''; mB.innerHTML = '';
+            
+            const availableChars = getSortedCharacters()
+                .filter(char => !content.contentCharacters.some(cc => cc.charId === char.id));
+
+            availableChars.forEach(char => {
+                const noteDisplay = char.note ? ` ${char.note}` : '';
+                // 다크모드 클래스 추가
+                const html = `
+                    <label class="flex items-center justify-between p-3 rounded-lg border dark:border-dark-border hover:bg-zinc-50 dark:hover:bg-zinc-700 cursor-pointer transition bg-white dark:bg-dark-surface">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" name="multi-char-select" value="${char.id}" class="w-4 h-4 accent-primary">
+                            <span class="font-bold text-sm text-primary dark:text-dark-text truncate">${char.name} <span class="text-zinc-400 dark:text-dark-text-muted">${char.stat}${noteDisplay}</span></span>
+                        </div>
+                    </label>`;
+                char.type === 'dealer' ? mD.innerHTML += html : mB.innerHTML += html;
+            });
+            document.getElementById('add-char-modal').classList.add('active');
+        }
+
+        function submitMultiAdd() {
+            const content = state.contents.find(c => c.id === state.activeContentId);
+            const selected = document.querySelectorAll('input[name="multi-char-select"]:checked');
+            selected.forEach(cb => content.contentCharacters.push({ charId: cb.value, isCleared: false }));
+            closeAddCharModal();
+            save();
+            render(); // 저장 후 렌더링 추가
+        }
+
+        function removeCharFromContent(charId) {
+            const content = state.contents.find(c => c.id === state.activeContentId);
+            if (!content) return;
+            content.contentCharacters = content.contentCharacters.filter(cc => cc.charId !== charId);
+            if (content.sets) {
+                content.sets.forEach(s => {
+                    s.charIds = s.charIds.filter(id => id !== charId);
+                });
+            }
+            save();
+            renderContentArea(); // 부분 렌더링
+            renderDashboard();
+        }
+
+        function openAddSetModal() {
+            const content = state.contents.find(c => c.id === state.activeContentId);
+            if (!content) return;
+            const dContainer = document.getElementById('set-dealer-selection');
+            const bContainer = document.getElementById('set-buffer-selection');
+            dContainer.innerHTML = '';
+            bContainer.innerHTML = '';
+            
+            const sortedContentChars = content.contentCharacters
+                .map(cc => state.characters.find(c => c.id === cc.charId))
+                .filter(c => c);
+
+            let sortedChars;
+            switch (state.sortMethod) {
+                case 'asc': sortedChars = sortedContentChars.sort((a, b) => a.stat - b.stat); break;
+                case 'name': sortedChars = sortedContentChars.sort((a, b) => a.name.localeCompare(b.name, 'ko')); break;
+                case 'desc': default: sortedChars = sortedContentChars.sort((a, b) => b.stat - a.stat); break;
+            }
+            
+            sortedChars.forEach(char => {
+                const noteDisplay = char.note ? ` ${char.note}` : '';
+                // 다크모드 클래스 추가
+                const html = `
+                    <label class="flex items-center justify-between p-3 rounded-lg border dark:border-dark-border bg-white dark:bg-dark-surface hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer transition">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" name="set-member-select" value="${char.id}" class="w-4 h-4 accent-blue-600">
+                            <span class="font-bold text-sm text-primary dark:text-dark-text truncate">${char.name} <span class="text-zinc-400 dark:text-dark-text-muted">${char.stat}${noteDisplay}</span></span>
+                        </div>
+                    </label>
+                `;
+                char.type === 'dealer' ? dContainer.innerHTML += html : bContainer.innerHTML += html;
+            });
+            document.getElementById('add-set-modal').classList.add('active');
+        }
+
+        function submitAddSet() {
+            const content = state.contents.find(c => c.id === state.activeContentId);
+            const nameInput = document.getElementById('new-set-name');
+            const selected = Array.from(document.querySelectorAll('input[name="set-member-select"]:checked')).map(cb => cb.value);
+            
+            if (selected.length < 1) return alert('캐릭터를 선택해주세요.');
+
+            let setName = nameInput.value.trim();
+            if (!setName) {
+                const currentSetCount = (content.sets || []).length;
+                setName = (currentSetCount + 1) + "파티";
+            }
+
+            if (!content.sets) content.sets = [];
+            content.sets.push({
+                id: 'set_' + Date.now(),
+                name: setName,
+                charIds: selected
+            });
+            
+            nameInput.value = '';
+            closeAddSetModal();
+            save();
+            renderContentArea(); // 부분 렌더링
+        }
+
+        function deleteSet(setId) {
+            const content = state.contents.find(c => c.id === state.activeContentId);
+            if (!content) return;
+            content.sets = content.sets.filter(s => s.id !== setId);
+            save();
+            renderContentArea(); // 부분 렌더링
+        }
+
+        function updateSetName(setId, newName) {
+            const content = state.contents.find(c => c.id === state.activeContentId);
+            if (!content) return;
+            const set = content.sets.find(s => s.id === setId);
+            if (!set) return;
+            
+            const trimmedName = newName.trim();
+            if (trimmedName) {
+                set.name = trimmedName;
+                save();
+            }
+            renderContentArea(); // 부분 렌더링 (입력창 값 초기화 위해 필요)
+        }
+
+        function confirmResetAll() {
+            if (confirm('모든 컨텐츠의 클리어 체크를 해제할까요?')) {
+                state.contents.forEach(c => c.contentCharacters.forEach(cc => cc.isCleared = false));
+                save();
+                render(); // 저장 후 렌더링 추가
+            }
+        }
+
+        // 렌더링 함수들
+        function render() {
+            renderDashboard();
+            renderCharacters();
+            renderTabs();
+            renderContentArea();
+        }
+
+        function renderDashboard() {
+            const grid = document.getElementById('dashboard-grid');
+            grid.innerHTML = '';
+            state.contents.forEach(c => {
+                const total = c.contentCharacters.length;
+                const cleared = c.contentCharacters.filter(cc => cc.isCleared).length;
+                const ratio = total === 0 ? 0 : Math.round((cleared/total)*100);
+                // 다크모드 클래스 추가
+                grid.innerHTML += `
+                    <div class="bg-white dark:bg-dark-surface p-4 rounded-xl border dark:border-dark-border shadow-sm cursor-pointer hover:border-zinc-400 dark:hover:border-zinc-500 transition" onclick="state.activeContentId = '${c.id}'; state.isEditMode = false; render();">
+                        <div class="flex justify-between mb-2 text-xs font-bold">
+                            <span class="truncate pr-2 text-primary dark:text-dark-text">${c.name}</span>
+                            <span class="text-zinc-400 dark:text-dark-text-muted font-mono shrink-0">${cleared}/${total}</span>
+                        </div>
+                        <div class="status-bar-bg"><div class="status-bar-fill" style="width:${ratio}%"></div></div>
+                    </div>`;
+            });
+        }
+
+        function renderCharacters() {
+            const dList = document.getElementById('dealer-list');
+            const bList = document.getElementById('buffer-list');
+            dList.innerHTML = ''; bList.innerHTML = '';
+            
+            getSortedCharacters().forEach(char => {
+                const isEditing = state.editingCharId === char.id;
+                const charEl = document.createElement('div');
+                
+                if (isEditing) {
+                    // 다크모드 클래스 추가
+                    charEl.className = "p-3 border rounded-lg editing-char-box";
+                    charEl.innerHTML = `
+                        <div class="flex flex-col gap-2 mb-2">
+                            <input id="edit-name-${char.id}" type="text" value="${char.name}" class="w-full border dark:border-dark-border rounded px-2 py-1 text-sm font-bold outline-none text-primary dark:text-dark-text bg-white dark:bg-dark-surface">
+                            <div class="flex gap-2">
+                                <input id="edit-stat-${char.id}" type="number" value="${char.stat}" class="w-1/2 border dark:border-dark-border rounded px-2 py-1 text-xs outline-none text-primary dark:text-dark-text bg-white dark:bg-dark-surface" placeholder="수치">
+                                <input id="edit-note-${char.id}" type="text" value="${char.note || ''}" class="w-1/2 border dark:border-dark-border rounded px-2 py-1 text-xs outline-none text-primary dark:text-dark-text bg-white dark:bg-dark-surface" placeholder="메모">
+                            </div>
+                            <select id="edit-type-${char.id}" class="w-full border dark:border-dark-border rounded px-2 py-1 text-xs outline-none text-primary dark:text-dark-text bg-white dark:bg-dark-surface">
+                                <option value="dealer" ${char.type === 'dealer' ? 'selected' : ''}>딜러</option>
+                                <option value="buffer" ${char.type === 'buffer' ? 'selected' : ''}>버퍼</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="submitInlineEdit('${char.id}')" class="flex-1 bg-primary dark:bg-zinc-700 text-white text-[10px] py-1 rounded hover:bg-primary-hover dark:hover:bg-zinc-600 transition">저장</button>
+                            <button onclick="cancelInlineEdit()" class="flex-1 bg-white dark:bg-dark-surface border dark:border-dark-border text-primary dark:text-dark-text text-[10px] py-1 rounded hover:bg-zinc-50 dark:hover:bg-zinc-700 transition">취소</button>
+                        </div>
+                    `;
+                } else {
+                    // 다크모드 클래스 추가
+                    charEl.className = "flex flex-col p-3 border dark:border-dark-border rounded-lg bg-white dark:bg-dark-surface hover:border-zinc-300 dark:hover:border-zinc-500 transition group relative border-f4f4f5";
+                    const noteDisplay = char.note ? ` ${char.note}` : '';
+                    charEl.innerHTML = `
+                        <div class="flex items-center gap-1.5 overflow-hidden text-sm font-bold">
+                            <span class="truncate text-primary dark:text-dark-text">${char.name}</span>
+                            <span class="text-zinc-400 dark:text-dark-text-muted">${char.stat}${noteDisplay}</span>
+                        </div>
+                        <div class="absolute top-2 right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition bg-white dark:bg-dark-surface pl-1 rounded-bl-lg">
+                            <button onclick="startInlineEdit('${char.id}')" class="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-zinc-400 dark:text-zinc-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                            <button onclick="deleteCharacter('${char.id}')" class="p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded text-red-300 dark:text-red-400 hover:text-red-500"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                        </div>
+                    `;
+                }
+                char.type === 'dealer' ? dList.appendChild(charEl) : bList.appendChild(charEl);
+            });
+        }
+
+        function renderTabs() {
+            const container = document.getElementById('content-tabs');
+            container.innerHTML = '';
+            state.contents.forEach((c, idx) => {
+                const active = state.activeContentId === c.id;
+                const wrapper = document.createElement('div');
+                // 다크모드 클래스 추가 및 조건부 스타일링 수정
+                wrapper.className = `tab-btn px-5 py-3 rounded-xl text-base font-bold transition flex items-center gap-2.5 cursor-pointer ${active ? 'bg-primary dark:bg-zinc-700 text-white shadow-md tab-active' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 tab-inactive'}`;
+                
+                wrapper.onclick = () => { state.activeContentId = c.id; state.isEditMode = false; render(); };
+
+                const moveLeft = document.createElement('button');
+                // 다크모드 텍스트 색상 수정
+                moveLeft.className = `move-btn ${active ? 'text-zinc-400 dark:text-zinc-300' : 'text-zinc-300 dark:text-zinc-500'}`;
+                moveLeft.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>`;
+                moveLeft.onclick = (e) => { e.stopPropagation(); moveContent(-1); };
+                if (idx === 0) moveLeft.classList.add('invisible');
+
+                const nameText = document.createElement('span');
+                nameText.innerText = c.name;
+                nameText.className = "whitespace-nowrap";
+
+                const moveRight = document.createElement('button');
+                // 다크모드 텍스트 색상 수정
+                moveRight.className = `move-btn ${active ? 'text-zinc-400 dark:text-zinc-300' : 'text-zinc-300 dark:text-zinc-500'}`;
+                moveRight.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>`;
+                moveRight.onclick = (e) => { e.stopPropagation(); moveContent(1); };
+                if (idx === state.contents.length - 1) moveRight.classList.add('invisible');
+
+                wrapper.appendChild(moveLeft);
+                wrapper.appendChild(nameText);
+                wrapper.appendChild(moveRight);
+                container.appendChild(wrapper);
+            });
+        }
+
+        function renderContentArea() {
+            const dGrid = document.getElementById('dealer-grid');
+            const bGrid = document.getElementById('buffer-grid');
+            const sGrid = document.getElementById('sets-grid');
+            const container = document.getElementById('content-grid-container');
+            const setsContainer = document.getElementById('content-sets-container');
+            const empty = document.getElementById('empty-content-msg');
+            const content = state.contents.find(c => c.id === state.activeContentId);
+
+            if (!content) {
+                container.classList.add('hidden'); setsContainer.classList.add('hidden'); empty.classList.remove('hidden');
+                document.getElementById('party-controls').classList.add('hidden');
+                document.getElementById('content-edit-tools').classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden'); setsContainer.classList.remove('hidden'); empty.classList.add('hidden');
+            document.getElementById('party-controls').classList.remove('hidden');
+            document.getElementById('content-edit-tools').classList.remove('hidden');
+            document.getElementById('current-content-title').innerText = content.name;
+            
+            const editBtn = document.getElementById('edit-mode-btn');
+            editBtn.innerText = state.isEditMode ? '수정 완료' : '수정 모드';
+            // 다크모드 클래스 추가
+            editBtn.className = `px-5 py-2 border rounded-lg text-sm font-bold transition shadow-sm ${state.isEditMode ? 'bg-orange-500 border-orange-500 text-white dark:bg-orange-600 dark:border-orange-600' : 'bg-white dark:bg-dark-surface border-zinc-200 dark:border-dark-border text-primary dark:text-dark-text hover:bg-zinc-50 dark:hover:bg-zinc-700'}`;
+
+            // 세트 렌더링
+            sGrid.innerHTML = '';
+            if (content.sets && content.sets.length > 0) {
+                content.sets.forEach(set => {
+                    const members = content.contentCharacters.filter(cc => set.charIds.includes(cc.charId));
+                    const allCleared = members.length > 0 && members.every(m => m.isCleared);
+                    const setEl = document.createElement('div');
+                    // 다크모드 클래스 추가 (border-dashed 색상 등)
+                    setEl.className = `set-card p-4 transition cursor-pointer relative bg-fafafa dark:bg-dark-surface border-e4e4e7 dark:border-dark-border ${allCleared ? 'cleared' : ''} ${state.isEditMode ? 'border-dashed border-zinc-400 dark:border-zinc-500' : 'border'}`;
+                    
+                    if (!state.isEditMode) {
+                        setEl.onclick = () => toggleSetClear(set.id);
+                    }
+
+                    let membersHtml = members.map(m => {
+                        const char = state.characters.find(c => c.id === m.charId);
+                        if(!char) return '';
+
+                        const typePrefix = char.type === 'dealer' 
+                            ? '<span class="text-zinc-400 dark:text-dark-text-muted mr-0.5 font-medium">(딜)</span>' 
+                            : '<span class="text-emerald-500 dark:text-emerald-400 mr-0.5 font-medium">(벞)</span>';
+
+                        // 다크모드 클리어 상태 색상 추가
+                        const clearedClass = m.isCleared ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' : 'bg-white dark:bg-dark-surface shadow-sm border-zinc-100 dark:border-dark-border';
+                        const noteDisplay = char.note ? ` ${char.note}` : '';
+
+                        return `
+                            <div class="flex items-center justify-center gap-1.5 p-2 rounded border ${clearedClass} text-sm font-bold">
+                                <span class="truncate ${m.isCleared ? '' : 'text-primary dark:text-dark-text'}">${typePrefix}${char.name}</span>
+                                <span class="${m.isCleared ? 'text-emerald-600 dark:text-emerald-300' : 'text-zinc-400 dark:text-dark-text-muted'}">${char.stat}${noteDisplay}</span>
+                            </div>
+                        `;
+                    }).join('');
+
+                    const setNameHtml = state.isEditMode 
+                        ? `<input type="text" value="${set.name}" class="w-full font-bold text-sm text-primary dark:text-dark-text bg-white dark:bg-dark-surface border border-zinc-300 dark:border-dark-border rounded px-2 py-1 outline-none focus:border-primary dark:focus:border-zinc-500" onchange="updateSetName('${set.id}', this.value)" onclick="event.stopPropagation()">`
+                        : `<h4 class="font-bold text-sm text-primary dark:text-dark-text">${set.name}</h4>`;
+
+                    setEl.innerHTML = `
+                        <div class="flex justify-between items-center mb-3 gap-2">
+                            ${setNameHtml}
+                            <div class="flex items-center gap-2 shrink-0">
+                                ${state.isEditMode ? `<button onclick="event.stopPropagation(); deleteSet('${set.id}')" class="text-red-400 hover:text-red-600 dark:text-red-300 dark:hover:text-red-500 font-bold text-xs bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded">삭제</button>` : (allCleared ? '<span class="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded">ALL CLEAR</span>' : '')}
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            ${membersHtml || '<span class="w-full text-xs text-zinc-400 dark:text-dark-text-muted italic text-center py-2">멤버 없음</span>'}
+                        </div>
+                    `;
+                    sGrid.appendChild(setEl);
+                });
+            } else {
+                sGrid.innerHTML = '<div class="col-span-full py-10 text-center text-zinc-300 dark:text-zinc-500 text-sm border-2 border-dashed dark:border-dark-border rounded-xl bg-zinc-50 dark:bg-zinc-800/50">생성된 세트가 없습니다.</div>';
+            }
+
+            // 개별 캐릭터 렌더링
+            dGrid.innerHTML = ''; bGrid.innerHTML = '';
+            const ccList = content.contentCharacters.map(cc => ({ ...cc, char: state.characters.find(c => c.id === cc.charId) })).filter(i => i.char);
+
+            ccList.forEach(item => {
+                const { char, isCleared } = item;
+                const card = document.createElement('div');
+                // 다크모드 클래스 추가
+                card.className = `char-card card p-4 flex items-center justify-between shadow-sm bg-white dark:bg-dark-surface border-f4f4f5 dark:border-dark-border ${isCleared ? 'cleared' : ''} ${state.isEditMode ? 'border-dashed border-zinc-300 dark:border-zinc-500' : 'border'}`;
+                card.onclick = () => toggleCharClear(char.id);
+                
+                const noteDisplay = char.note ? ` ${char.note}` : '';
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-2 overflow-hidden text-base font-bold">
+                        <span class="truncate ${isCleared ? '' : 'text-primary dark:text-dark-text'}">${char.name}</span>
+                        <span class="${isCleared ? 'text-emerald-600 dark:text-emerald-300' : 'text-zinc-400 dark:text-dark-text-muted'}">${char.stat}${noteDisplay}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        ${state.isEditMode ? `
+                            <button onclick="event.stopPropagation(); removeCharFromContent('${char.id}')" class="text-red-400 hover:text-red-600 dark:text-red-300 dark:hover:text-red-500 font-bold p-1 transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        ` : (isCleared ? '<span class="text-[10px] font-black text-emerald-700 dark:text-emerald-300 tracking-widest bg-emerald-50 dark:bg-emerald-900/50 px-2 py-1 rounded">CLEAR</span>' : '')}
+                    </div>
+                `;
+                char.type === 'dealer' ? dGrid.appendChild(card) : bGrid.appendChild(card);
+            });
+        }
+
+        function downloadBackup() {
+            // 저장 전에 현재 상태를 확실히 반영
+            save();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+            const a = document.createElement('a'); a.href = dataStr; a.download = `party_backup_${Date.now()}.json`; a.click();
+        }
+
+        function confirmLoadData() {
+            if (confirm("경고: 데이터를 로드하면 현재 작업 중인 모든 내용이 삭제되고 덮어씌워집니다.\n\n계속 진행하시겠습니까?")) {
+                document.getElementById('load-file').click();
+            }
+        }
+
+        function handleFileLoad(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const loadedData = JSON.parse(e.target.result);
+                    // 기본 데이터 구조 확인
+                    if (!loadedData.characters || !loadedData.contents) {
+                        throw new Error("Invalid data structure");
+                    }
+                    state = { ...state, ...loadedData };
+                    // 로드된 데이터에 다크모드 설정이 없으면 기본값 false 적용
+                    if (state.darkMode === undefined) state.darkMode = false;
+                    
+                    save();
+                    // 다크모드 상태 적용 및 렌더링
+                    applyDarkMode();
+                    render();
+                    alert("데이터가 성공적으로 로드되었습니다.");
+                } catch(err) {
+                    alert('올바른 데이터 파일이 아닙니다. (' + err.message + ')');
+                } finally {
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function closeAddCharModal() { document.getElementById('add-char-modal').classList.remove('active'); }
+        function closeAddSetModal() { document.getElementById('add-set-modal').classList.remove('active'); }
+        
+        window.onload = init;
+    </script>
+</body>
+</html>
