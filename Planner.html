@@ -445,6 +445,15 @@
             const type = document.getElementById(`edit-type-${id}`).value;
 
             if (!name || !stat) return;
+
+            // ▼▼▼ 중복 체크 로직 추가 ▼▼▼
+            // 현재 수정 중인 캐릭터(c.id === id)는 제외하고 이름이 같은지 확인
+            if (state.characters.some(c => c.id !== id && c.name === name)) {
+                alert('중복된 닉네임입니다.');
+                return;
+            }
+            // ▲▲▲ 여기까지 ▲▲▲
+
             char.name = name;
             char.stat = parseInt(stat);
             char.note = note;
