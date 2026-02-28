@@ -269,7 +269,8 @@
                             </div>
                             <div id="party-controls" class="flex gap-3 hidden">
                                 <button id="edit-mode-btn" onclick="toggleEditMode()" class="px-5 py-2 border dark:border-dark-border rounded-lg text-sm font-bold transition shadow-sm bg-white dark:bg-dark-surface hover:bg-zinc-50 dark:hover:bg-zinc-700 text-primary dark:text-dark-text">수정 모드</button>
-                                <button onclick="openAddSetModal()" class="px-5 py-2 border dark:border-dark-border rounded-lg text-sm font-bold transition shadow-sm bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-primary dark:text-dark-text">세트 추가</button>
+                                <!-- openSetModal()로 변경 -->
+                                <button onclick="openSetModal()" class="px-5 py-2 border dark:border-dark-border rounded-lg text-sm font-bold transition shadow-sm bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-primary dark:text-dark-text">세트 추가</button>
                                 <button onclick="openAddCharModal()" class="bg-primary dark:bg-zinc-600 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-primary-hover dark:hover:bg-zinc-500 transition shadow-sm">캐릭터 추가</button>
                             </div>
                         </div>
@@ -328,10 +329,11 @@
         </div>
     </div>
 
-    <!-- 세트 추가 모달 -->
+    <!-- 세트 추가/수정 모달 (통합) -->
     <div id="add-set-modal" class="modal">
         <div class="bg-white dark:bg-dark-surface p-8 rounded-2xl shadow-2xl max-w-4xl w-full mx-4 border dark:border-dark-border">
-            <h4 class="font-bold text-2xl mb-4 text-primary dark:text-dark-text">새 세트(파티) 구성</h4>
+            <!-- ID 추가: 동적 타이틀 변경 -->
+            <h4 id="set-modal-title" class="font-bold text-2xl mb-4 text-primary dark:text-dark-text">새 세트(파티) 구성</h4>
             <p class="text-sm text-zinc-500 dark:text-dark-text-muted mb-6">해당 컨텐츠에 포함된 캐릭터 중 원하는 인원을 선택하여 세트를 만듭니다.</p>
             
             <div class="mb-6">
@@ -352,7 +354,8 @@
 
             <div class="flex justify-end gap-3 pt-4 border-t dark:border-dark-border">
                 <button onclick="closeAddSetModal()" class="px-6 py-3 text-sm font-bold border dark:border-dark-border rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-700 transition text-primary dark:text-dark-text">취소</button>
-                <button onclick="submitAddSet()" class="px-6 py-3 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">세트 생성</button>
+                <!-- ID 추가 및 함수 변경: submitSetForm() -->
+                <button id="set-modal-submit-btn" onclick="submitSetForm()" class="px-6 py-3 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">세트 생성</button>
             </div>
         </div>
     </div>
@@ -364,6 +367,8 @@
             activeContentId: null, 
             isEditMode: false, 
             editingCharId: null,
+            // 추가: 현재 수정 중인 세트 ID 저장
+            editingSetId: null,
             sortMethod: 'desc',
             darkMode: false // 다크모드 상태 추가
         };
@@ -373,6 +378,7 @@
             if (saved) { 
                 state = { ...state, ...JSON.parse(saved) };
                 state.isEditMode = false;
+                state.editingSetId = null; // 초기화시 리셋
                 state.contents.forEach(c => { if(!c.sets) c.sets = []; });
                 if (!state.sortMethod) state.sortMethod = 'desc';
                 // 저장된 다크모드 상태가 없으면 기본값 false
@@ -634,13 +640,39 @@
             renderDashboard();
         }
 
-        function openAddSetModal() {
+        // 변경: 세트 추가/수정 모달 열기 (통합 함수)
+        function openSetModal(setId = null) {
             const content = state.contents.find(c => c.id === state.activeContentId);
             if (!content) return;
+            
+            state.editingSetId = setId; // 수정할 세트 ID 설정 (없으면 null)
+            
             const dContainer = document.getElementById('set-dealer-selection');
             const bContainer = document.getElementById('set-buffer-selection');
+            const nameInput = document.getElementById('new-set-name');
+            const modalTitle = document.getElementById('set-modal-title');
+            const submitBtn = document.getElementById('set-modal-submit-btn');
+
             dContainer.innerHTML = '';
             bContainer.innerHTML = '';
+            
+            let targetSet = null;
+            if (setId) {
+                targetSet = content.sets.find(s => s.id === setId);
+            }
+
+            // 모달 UI 상태 설정 (추가 vs 수정)
+            if (targetSet) {
+                // 수정 모드
+                modalTitle.innerText = "세트 구성 수정";
+                submitBtn.innerText = "세트 수정 완료";
+                nameInput.value = targetSet.name;
+            } else {
+                // 추가 모드
+                modalTitle.innerText = "새 세트(파티) 구성";
+                submitBtn.innerText = "세트 생성";
+                nameInput.value = '';
+            }
             
             const sortedContentChars = content.contentCharacters
                 .map(cc => state.characters.find(c => c.id === cc.charId))
@@ -654,12 +686,14 @@
             }
             
             sortedChars.forEach(char => {
+                // 수정 모드일 경우, 기존 세트에 포함된 캐릭터인지 확인하여 체크박스 상태 결정
+                const isChecked = targetSet && targetSet.charIds.includes(char.id);
                 const noteDisplay = char.note ? ` ${char.note}` : '';
-                // 다크모드 클래스 추가
+                
                 const html = `
                     <label class="flex items-center justify-between p-3 rounded-lg border dark:border-dark-border bg-white dark:bg-dark-surface hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer transition">
                         <div class="flex items-center gap-3">
-                            <input type="checkbox" name="set-member-select" value="${char.id}" class="w-4 h-4 accent-blue-600">
+                            <input type="checkbox" name="set-member-select" value="${char.id}" class="w-4 h-4 accent-blue-600" ${isChecked ? 'checked' : ''}>
                             <span class="font-bold text-sm text-primary dark:text-dark-text truncate">${char.name} <span class="text-zinc-400 dark:text-dark-text-muted">${char.stat}${noteDisplay}</span></span>
                         </div>
                     </label>
@@ -669,7 +703,8 @@
             document.getElementById('add-set-modal').classList.add('active');
         }
 
-        function submitAddSet() {
+        // 변경: 세트 폼 제출 (추가/수정 통합)
+        function submitSetForm() {
             const content = state.contents.find(c => c.id === state.activeContentId);
             const nameInput = document.getElementById('new-set-name');
             const selected = Array.from(document.querySelectorAll('input[name="set-member-select"]:checked')).map(cb => cb.value);
@@ -677,20 +712,32 @@
             if (selected.length < 1) return alert('캐릭터를 선택해주세요.');
 
             let setName = nameInput.value.trim();
-            if (!setName) {
-                const currentSetCount = (content.sets || []).length;
-                setName = (currentSetCount + 1) + "파티";
-            }
 
-            if (!content.sets) content.sets = [];
-            content.sets.push({
-                id: 'set_' + Date.now(),
-                name: setName,
-                charIds: selected
-            });
+            if (state.editingSetId) {
+                // 수정 모드: 기존 세트 업데이트
+                const set = content.sets.find(s => s.id === state.editingSetId);
+                if (set) {
+                    if (!setName) setName = set.name; // 이름이 비어있으면 기존 이름 유지
+                    set.name = setName;
+                    set.charIds = selected;
+                }
+            } else {
+                // 추가 모드: 새 세트 생성
+                if (!setName) {
+                    const currentSetCount = (content.sets || []).length;
+                    setName = (currentSetCount + 1) + "파티";
+                }
+                if (!content.sets) content.sets = [];
+                content.sets.push({
+                    id: 'set_' + Date.now(),
+                    name: setName,
+                    charIds: selected
+                });
+            }
             
             nameInput.value = '';
             closeAddSetModal();
+            state.editingSetId = null; // 수정 모드 종료
             save();
             renderContentArea(); // 부분 렌더링
         }
@@ -703,19 +750,7 @@
             renderContentArea(); // 부분 렌더링
         }
 
-        function updateSetName(setId, newName) {
-            const content = state.contents.find(c => c.id === state.activeContentId);
-            if (!content) return;
-            const set = content.sets.find(s => s.id === setId);
-            if (!set) return;
-            
-            const trimmedName = newName.trim();
-            if (trimmedName) {
-                set.name = trimmedName;
-                save();
-            }
-            renderContentArea(); // 부분 렌더링 (입력창 값 초기화 위해 필요)
-        }
+        // 삭제: 인라인 세트 이름 수정 함수 (updateSetName) 제거됨
 
         function confirmResetAll() {
             if (confirm('모든 컨텐츠의 클리어 체크를 해제할까요?')) {
@@ -896,15 +931,25 @@
                         `;
                     }).join('');
 
-                    const setNameHtml = state.isEditMode 
-                        ? `<input type="text" value="${set.name}" class="w-full font-bold text-sm text-primary dark:text-dark-text bg-white dark:bg-dark-surface border border-zinc-300 dark:border-dark-border rounded px-2 py-1 outline-none focus:border-primary dark:focus:border-zinc-500" onchange="updateSetName('${set.id}', this.value)" onclick="event.stopPropagation()">`
-                        : `<h4 class="font-bold text-sm text-primary dark:text-dark-text">${set.name}</h4>`;
+                    // 변경: 수정 모드 여부와 관계없이 항상 텍스트로 표시
+                    const setNameHtml = `<h4 class="font-bold text-sm text-primary dark:text-dark-text">${set.name}</h4>`;
+
+                    // 변경: 수정 모드일 때 '수정' 버튼 추가 및 '삭제' 버튼과 함께 표시
+                    let actionButtons = '';
+                    if (state.isEditMode) {
+                        actionButtons = `
+                            <button onclick="event.stopPropagation(); openSetModal('${set.id}')" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-bold text-xs bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded mr-1">수정</button>
+                            <button onclick="event.stopPropagation(); deleteSet('${set.id}')" class="text-red-400 hover:text-red-600 dark:text-red-300 dark:hover:text-red-500 font-bold text-xs bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded">삭제</button>
+                        `;
+                    } else if (allCleared) {
+                        actionButtons = '<span class="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded">ALL CLEAR</span>';
+                    }
 
                     setEl.innerHTML = `
                         <div class="flex justify-between items-center mb-3 gap-2">
                             ${setNameHtml}
                             <div class="flex items-center gap-2 shrink-0">
-                                ${state.isEditMode ? `<button onclick="event.stopPropagation(); deleteSet('${set.id}')" class="text-red-400 hover:text-red-600 dark:text-red-300 dark:hover:text-red-500 font-bold text-xs bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded">삭제</button>` : (allCleared ? '<span class="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded">ALL CLEAR</span>' : '')}
+                                ${actionButtons}
                             </div>
                         </div>
                         <div class="flex flex-wrap gap-1.5">
@@ -991,7 +1036,10 @@
         }
 
         function closeAddCharModal() { document.getElementById('add-char-modal').classList.remove('active'); }
-        function closeAddSetModal() { document.getElementById('add-set-modal').classList.remove('active'); }
+        function closeAddSetModal() { 
+            document.getElementById('add-set-modal').classList.remove('active'); 
+            state.editingSetId = null; // 모달 닫을 때 수정 상태 초기화
+        }
         
         window.onload = init;
     </script>
