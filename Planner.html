@@ -144,9 +144,70 @@
         .dark #toggle-switch-dot {
             transform: translateX(100%);
         }
+
+        /* 메모장 관련 스타일 */
+        #notepad-modal {
+            /* 기본 위치 중앙 배치를 위한 스타일, JS로 덮어씌워짐 */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 이미지 스타일 수정: max-width 제거하여 고정 크기 유지 */
+        #notepad-content img {
+            max-width: none !important; 
+            height: auto;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        /* 이미지 선택 시 래퍼 스타일 */
+        .image-resizer-wrapper {
+            display: inline-block;
+            position: relative;
+            outline: 2px solid #3b82f6; /* 파란색 테두리 */
+            margin: 4px; /* 약간의 여백 */
+        }
+
+        /* 이미지 리사이즈 핸들 (우측 하단) */
+        .image-resizer-handle {
+            position: absolute;
+            bottom: -6px;
+            right: -6px;
+            width: 12px;
+            height: 12px;
+            background-color: #3b82f6;
+            border: 1px solid white;
+            cursor: se-resize;
+            z-index: 10;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* 메모장 자체 리사이즈 핸들 */
+        .resizer {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background: transparent;
+            z-index: 2;
+        }
+        /* 우측 하단 메모장 리사이즈 핸들 스타일 (빗금 표시) */
+        .resizer.se {
+            bottom: 0;
+            right: 0;
+            cursor: se-resize;
+            /* 빗금 무늬 그라데이션 */
+            background-image: linear-gradient(135deg, transparent 45%, #a1a1aa 45%, #a1a1aa 50%, transparent 50%, transparent 70%, #a1a1aa 70%, #a1a1aa 75%, transparent 75%);
+            background-size: 10px 10px;
+            opacity: 0.5;
+        }
+        .dark .resizer.se {
+            background-image: linear-gradient(135deg, transparent 45%, #71717a 45%, #71717a 50%, transparent 50%, transparent 70%, #71717a 70%, #71717a 75%, transparent 75%);
+        }
     </style>
 </head>
-<body class="p-4 md:p-8 bg-[#f4f4f5] dark:bg-dark-bg text-primary dark:text-dark-text transition-colors duration-100"> <!-- body 트랜지션 속도 빠르게 -->
+<body class="p-4 md:p-8 bg-[#f4f4f5] dark:bg-dark-bg text-primary dark:text-dark-text transition-colors duration-100 relative"> <!-- body 트랜지션 속도 빠르게 -->
 
     <div id="app" class="max-w-[1800px] mx-auto">
 <!-- 상단 바 -->
@@ -162,6 +223,12 @@
         <p class="text-base text-zinc-500 dark:text-dark-text-muted mt-1">컨텐츠별 캐릭터 배치 및 클리어 현황 관리</p>
     </div>
     <div class="flex items-center gap-3">
+        <!-- 메모장 버튼 -->
+        <button onclick="toggleNotepad()" class="flex items-center gap-1 px-3 py-2.5 text-sm font-semibold border border-zinc-200 dark:border-dark-border rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-sm bg-white dark:bg-dark-surface text-primary dark:text-dark-text mr-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            메모장
+        </button>
+
         <button onclick="toggleDarkMode()" aria-label="다크 모드 토글" class="relative inline-flex h-8 w-14 items-center rounded-full bg-zinc-300 dark:bg-zinc-600 transition-colors focus:outline-none shadow-inner">
             <span id="toggle-switch-dot" class="inline-block h-6 w-6 transform rounded-full bg-white dark:bg-zinc-200 shadow transition-transform duration-300 ease-in-out translate-x-1 flex items-center justify-center">
                 <svg class="w-4 h-4 text-amber-500 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
@@ -311,6 +378,41 @@
         </div>
     </div>
 
+    <!-- 메모장 모달 (독립적인 floating box) -->
+    <div id="notepad-modal" class="fixed hidden z-[9999] w-[500px] h-[600px] min-w-[300px] min-h-[400px] flex flex-col">
+        <div class="bg-white dark:bg-dark-surface rounded-xl border dark:border-dark-border flex flex-col h-full overflow-hidden shadow-2xl relative">
+            <!-- Header (Draggable) -->
+            <div id="notepad-header" class="flex items-center justify-between p-3 border-b dark:border-dark-border bg-zinc-100 dark:bg-zinc-800 cursor-move select-none shrink-0">
+                <!-- Left controls -->
+                <div class="flex items-center gap-3">
+                    <span class="font-bold text-sm flex items-center gap-1 text-primary dark:text-dark-text">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        메모장
+                    </span>
+                </div>
+                <!-- Right controls -->
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center mr-2" title="글자 크기 조절">
+                         <input id="notepad-fontsize" type="number" value="24" min="8" max="96" class="w-14 px-2 py-1 text-sm border rounded dark:bg-dark-surface dark:border-dark-border text-center outline-none focus:border-primary dark:focus:border-zinc-500 text-primary dark:text-dark-text">
+                         <span class="text-sm text-zinc-500 dark:text-dark-text-muted ml-1">pt</span>
+                    </div>
+                    <button onclick="clearNotepad()" class="text-xs font-bold text-red-500 hover:text-red-700 dark:hover:text-red-400 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">비우기</button>
+                    <button onclick="toggleNotepad()" class="text-zinc-400 hover:text-primary dark:hover:text-dark-text p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+            </div>
+            <!-- Content (Editable) -->
+            <div id="notepad-content-container" class="flex-1 overflow-hidden relative">
+                <div id="notepad-content" contenteditable="true" class="w-full h-full p-6 overflow-y-auto outline-none text-primary dark:text-dark-text leading-normal" style="font-size: 24pt;"></div>
+            </div>
+            
+            <!-- Resizer Handles -->
+            <div class="resizer se" id="notepad-resizer"></div>
+        </div>
+    </div>
+
+
     <!-- 캐릭터 일괄 추가 모달 -->
     <div id="add-char-modal" class="modal">
         <div class="bg-white dark:bg-dark-surface p-8 rounded-2xl shadow-2xl max-w-4xl w-full mx-4 border dark:border-dark-border">
@@ -411,6 +513,283 @@
             darkMode: false
         };
 
+        // --- 메모장 관련 스크립트 시작 ---
+        const notepadModal = document.getElementById('notepad-modal');
+        const notepadHeader = document.getElementById('notepad-header');
+        const notepadContent = document.getElementById('notepad-content');
+        const notepadResizer = document.getElementById('notepad-resizer');
+        const notepadFontsizeInput = document.getElementById('notepad-fontsize');
+        let isNotepadOpen = false;
+        let selectedImageWrapper = null; // 이미지 래퍼 선택 상태
+
+        function toggleNotepad() {
+            isNotepadOpen = !isNotepadOpen;
+            if (isNotepadOpen) {
+                notepadModal.classList.remove('hidden');
+                loadNotepadState();
+                // 처음 열 때 중앙 정렬 (위치 정보가 없을 경우)
+                if (!notepadModal.style.top || notepadModal.style.top === '50%') {
+                     centerNotepad();
+                }
+                notepadContent.focus();
+            } else {
+                // 닫기 전에 선택된 이미지 해제하여 핸들이 저장되지 않도록 함
+                deselectImage();
+                saveNotepadState();
+                notepadModal.classList.add('hidden');
+            }
+        }
+
+        function centerNotepad() {
+             const rect = notepadModal.getBoundingClientRect();
+             notepadModal.style.top = `${(window.innerHeight - rect.height) / 2}px`;
+             notepadModal.style.left = `${(window.innerWidth - rect.width) / 2}px`;
+             notepadModal.style.transform = 'none'; // 기존 중앙 정렬 CSS 해제
+        }
+
+
+        function saveNotepadState() {
+            // 저장 전에 선택된 이미지 래퍼 해제 (핸들 포함 저장 방지)
+            deselectImage();
+
+            localStorage.setItem('planner_notepad_content', notepadContent.innerHTML);
+            localStorage.setItem('planner_notepad_fontsize', notepadFontsizeInput.value);
+            if (notepadModal.style.top && notepadModal.style.top !== '50%') {
+                localStorage.setItem('planner_notepad_pos_top', notepadModal.style.top);
+                localStorage.setItem('planner_notepad_pos_left', notepadModal.style.left);
+            }
+            if (notepadModal.style.width) {
+                 localStorage.setItem('planner_notepad_width', notepadModal.style.width);
+                 localStorage.setItem('planner_notepad_height', notepadModal.style.height);
+            }
+        }
+
+        function loadNotepadState() {
+            // 내용 로드
+            const savedContent = localStorage.getItem('planner_notepad_content');
+            if (savedContent) notepadContent.innerHTML = savedContent;
+
+            // 폰트 크기 로드
+            const savedSize = localStorage.getItem('planner_notepad_fontsize') || '24';
+            notepadFontsizeInput.value = savedSize;
+            notepadContent.style.fontSize = savedSize + 'pt';
+
+            // 위치 로드
+            const savedTop = localStorage.getItem('planner_notepad_pos_top');
+            const savedLeft = localStorage.getItem('planner_notepad_pos_left');
+            if (savedTop && savedLeft) {
+                notepadModal.style.top = savedTop;
+                notepadModal.style.left = savedLeft;
+                notepadModal.style.transform = 'none';
+            }
+
+            // 크기 로드
+            const savedWidth = localStorage.getItem('planner_notepad_width');
+            const savedHeight = localStorage.getItem('planner_notepad_height');
+            if(savedWidth && savedHeight) {
+                notepadModal.style.width = savedWidth;
+                notepadModal.style.height = savedHeight;
+            }
+        }
+
+        function clearNotepad() {
+            if(confirm('메모장 내용을 모두 지우시겠습니까?')) {
+                notepadContent.innerHTML = '';
+                selectedImageWrapper = null;
+                saveNotepadState();
+                notepadContent.focus();
+            }
+        }
+
+        // 폰트 크기 변경 이벤트
+        notepadFontsizeInput.addEventListener('change', (e) => {
+            let size = parseInt(e.target.value);
+            if(isNaN(size) || size < 8) size = 8;
+            if(size > 144) size = 144;
+            e.target.value = size;
+            notepadContent.style.fontSize = size + 'pt';
+            saveNotepadState();
+        });
+
+        // 내용 변경 시 자동 저장 (타이핑 등)
+        notepadContent.addEventListener('input', () => {
+             // 내용이 변경되면 선택된 이미지 해제 (구조 변경 대비)
+             deselectImage();
+             saveNotepadState();
+        });
+
+        // 이미지 선택/해제 및 삭제 관련 함수들
+        function selectImage(img) {
+            deselectImage(); // 기존 선택 해제
+
+            // 래퍼 생성
+            const wrapper = document.createElement('span');
+            wrapper.className = 'image-resizer-wrapper';
+            wrapper.contentEditable = false; // 래퍼 자체는 수정 불가
+
+            // 리사이즈 핸들 생성
+            const handle = document.createElement('span');
+            handle.className = 'image-resizer-handle';
+
+            // 이미지 교체 (래퍼로 감싸기)
+            img.parentNode.insertBefore(wrapper, img);
+            wrapper.appendChild(img);
+            wrapper.appendChild(handle);
+
+            selectedImageWrapper = wrapper;
+
+            // 핸들에 드래그 리사이즈 이벤트 연결
+            handle.addEventListener('mousedown', initResizeImage);
+        }
+
+        function deselectImage() {
+            if (selectedImageWrapper) {
+                const img = selectedImageWrapper.querySelector('img');
+                if (img) {
+                    // 래퍼 제거하고 이미지만 원래 위치로 복귀
+                    selectedImageWrapper.parentNode.insertBefore(img, selectedImageWrapper);
+                    selectedImageWrapper.remove();
+                }
+                selectedImageWrapper = null;
+            }
+        }
+
+        // 이미지 클릭 시 선택
+        notepadContent.addEventListener('click', (e) => {
+            if (e.target.tagName === 'IMG') {
+                // 이미 선택된 이미지 래퍼 내부의 이미지인지 확인
+                if (selectedImageWrapper && selectedImageWrapper.contains(e.target)) return;
+                selectImage(e.target);
+            } else {
+                // 이미지 영역 밖 클릭, 또는 핸들 클릭이 아닐 경우 해제
+                if (selectedImageWrapper && !e.target.classList.contains('image-resizer-handle')) {
+                     deselectImage();
+                }
+            }
+        });
+
+        // 선택된 이미지 삭제 (Backspace, Delete 키)
+        notepadContent.addEventListener('keydown', (e) => {
+            if ((e.key === 'Backspace' || e.key === 'Delete')) {
+                if (selectedImageWrapper) {
+                    e.preventDefault();
+                    selectedImageWrapper.remove();
+                    selectedImageWrapper = null;
+                    saveNotepadState();
+                }
+            }
+        });
+
+        // --- 이미지 드래그 리사이즈 로직 ---
+        let isResizingImage = false;
+        let startImageX, startImageWidth;
+        let activeImage = null;
+
+        function initResizeImage(e) {
+            if (!selectedImageWrapper) return;
+            isResizingImage = true;
+            startImageX = e.clientX;
+            activeImage = selectedImageWrapper.querySelector('img');
+            startImageWidth = activeImage.offsetWidth;
+            
+            e.preventDefault(); // 텍스트 선택 방지
+            e.stopPropagation(); // 이벤트 전파 방지
+
+            document.addEventListener('mousemove', doResizeImage);
+            document.addEventListener('mouseup', stopResizeImage);
+        }
+
+        function doResizeImage(e) {
+            if (!isResizingImage || !activeImage) return;
+            const newWidth = startImageWidth + (e.clientX - startImageX);
+            // 최소 크기 제한 (예: 50px)
+            if (newWidth > 50) {
+                activeImage.style.width = newWidth + 'px';
+                activeImage.style.height = 'auto';
+            }
+        }
+
+        function stopResizeImage() {
+            if (isResizingImage) {
+                isResizingImage = false;
+                activeImage = null;
+                document.removeEventListener('mousemove', doResizeImage);
+                document.removeEventListener('mouseup', stopResizeImage);
+                // 크기 변경 후 저장 (저장 시 선택 해제됨)
+                saveNotepadState();
+            }
+        }
+        // --- 이미지 드래그 리사이즈 로직 끝 ---
+
+
+        // 드래그 앤 드롭 구현 (메모장 이동)
+        let isDragging = false;
+        let dragOffsetX, dragOffsetY;
+
+        notepadHeader.addEventListener('mousedown', (e) => {
+            // 입력 필드나 버튼 클릭 시 드래그 방지
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+            isDragging = true;
+            const rect = notepadModal.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            notepadModal.style.transform = 'none'; // 드래그 시작 시 transform 해제
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                let newX = e.clientX - dragOffsetX;
+                let newY = e.clientY - dragOffsetY;
+
+                // 화면 밖으로 나가지 않게 제한
+                const maxX = window.innerWidth - notepadModal.offsetWidth;
+                const maxY = window.innerHeight - notepadModal.offsetHeight;
+                newX = Math.max(0, Math.min(newX, maxX));
+                newY = Math.max(0, Math.min(newY, maxY));
+
+                notepadModal.style.left = newX + 'px';
+                notepadModal.style.top = newY + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                saveNotepadState();
+            }
+        });
+
+        // 리사이즈 구현 (메모장 크기 조절)
+        let isResizing = false;
+        let resizeStartX, resizeStartY, startWidth, startHeight;
+
+        notepadResizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            resizeStartX = e.clientX;
+            resizeStartY = e.clientY;
+            startWidth = notepadModal.offsetWidth;
+            startHeight = notepadModal.offsetHeight;
+            e.preventDefault(); // 텍스트 선택 방지
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isResizing) {
+                const newWidth = startWidth + (e.clientX - resizeStartX);
+                const newHeight = startHeight + (e.clientY - resizeStartY);
+                notepadModal.style.width = newWidth + 'px';
+                notepadModal.style.height = newHeight + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                saveNotepadState();
+            }
+        });
+        // --- 메모장 관련 스크립트 끝 ---
+
+
         function init() {
             const saved = localStorage.getItem('party_data_v6');
             if (saved) { 
@@ -427,6 +806,7 @@
             
             applyDarkMode();
             render();
+            // 메모장 상태 로드는 toggleNotepad() 호출 시 수행
         }
 
         function save() {
