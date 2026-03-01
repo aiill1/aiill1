@@ -217,8 +217,14 @@
                         <button onclick="addCharacter()" class="w-full bg-primary dark:bg-zinc-700 text-white py-3.5 rounded-lg text-base font-bold hover:bg-primary-hover dark:hover:bg-zinc-600 transition-colors">새 캐릭터 등록</button>
                     </div>
 
-                    <!-- 정렬 컨트롤 추가 -->
-                    <div class="flex justify-end items-center mb-4">
+                    <!-- 정렬 및 소수점 컨트롤 추가 -->
+                    <div class="flex justify-end items-center mb-4 gap-2">
+                        <select id="decimal-select" onchange="changeDecimalPlaces(this.value)" class="border dark:border-dark-border rounded-lg px-3 py-2 text-sm bg-white dark:bg-dark-surface outline-none text-primary dark:text-dark-text cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors">
+                            <option value="0">소수점 0자리</option>
+                            <option value="1" selected>소수점 1자리</option>
+                            <option value="2">소수점 2자리</option>
+                            <option value="3">소수점 3자리</option>
+                        </select>
                         <select id="sort-select" onchange="changeSortMethod(this.value)" class="border dark:border-dark-border rounded-lg px-3 py-2 text-sm bg-white dark:bg-dark-surface outline-none text-primary dark:text-dark-text cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors">
                             <option value="desc">수치 내림차순</option>
                             <option value="asc">수치 오름차순</option>
@@ -310,12 +316,18 @@
         <div class="bg-white dark:bg-dark-surface p-8 rounded-2xl shadow-2xl max-w-4xl w-full mx-4 border dark:border-dark-border">
             <h4 class="font-bold text-2xl mb-6 text-primary dark:text-dark-text">컨텐츠 캐릭터 추가</h4>
             <div class="grid grid-cols-2 gap-6 mb-8">
-                <div class="flex flex-col border-r dark:border-dark-border pr-6">
-                    <h5 class="text-sm font-black text-zinc-400 dark:text-dark-text-muted mb-4 uppercase tracking-widest">딜러 목록</h5>
+                <div class="flex flex-col border-r dark:border-dark-border pr-6" id="modal-dealer-list-container">
+                    <div class="flex justify-between items-center mb-4">
+                        <h5 class="text-sm font-black text-zinc-400 dark:text-dark-text-muted uppercase tracking-widest">딜러 목록</h5>
+                        <button onclick="toggleAllChars('dealer')" class="text-xs font-bold text-primary dark:text-dark-text hover:underline" id="toggle-all-dealer-btn">전체 선택</button>
+                    </div>
                     <div id="modal-dealer-list" class="max-h-[400px] overflow-y-auto space-y-2 pr-2"></div>
                 </div>
-                <div class="flex flex-col">
-                    <h5 class="text-sm font-black text-emerald-500 dark:text-emerald-400 mb-4 uppercase tracking-widest">버퍼 목록</h5>
+                <div class="flex flex-col" id="modal-buffer-list-container">
+                    <div class="flex justify-between items-center mb-4">
+                        <h5 class="text-sm font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-widest">버퍼 목록</h5>
+                        <button onclick="toggleAllChars('buffer')" class="text-xs font-bold text-primary dark:text-dark-text hover:underline" id="toggle-all-buffer-btn">전체 선택</button>
+                    </div>
                     <div id="modal-buffer-list" class="max-h-[400px] overflow-y-auto space-y-2 pr-2"></div>
                 </div>
             </div>
@@ -395,6 +407,7 @@
             editingCharId: null,
             editingSetId: null,
             sortMethod: 'desc',
+            decimalPlaces: 1, // 소수점 자릿수 상태 추가 (기본값 1)
             darkMode: false
         };
 
@@ -406,9 +419,11 @@
                 state.editingSetId = null;
                 state.contents.forEach(c => { if(!c.sets) c.sets = []; });
                 if (!state.sortMethod) state.sortMethod = 'desc';
+                if (state.decimalPlaces === undefined) state.decimalPlaces = 1; // 초기값 설정
                 if (state.darkMode === undefined) state.darkMode = false;
             }
             document.getElementById('sort-select').value = state.sortMethod;
+            document.getElementById('decimal-select').value = state.decimalPlaces; // 소수점 선택 셀렉트 초기화
             
             applyDarkMode();
             render();
@@ -502,6 +517,12 @@
 
         function changeSortMethod(method) {
             state.sortMethod = method;
+            save();
+            render();
+        }
+
+        function changeDecimalPlaces(value) {
+            state.decimalPlaces = parseInt(value, 10);
             save();
             render();
         }
@@ -610,6 +631,10 @@
             const mD = document.getElementById('modal-dealer-list');
             const mB = document.getElementById('modal-buffer-list');
             
+            // 모달 열릴 때 전체 선택 버튼 초기화
+            document.getElementById('toggle-all-dealer-btn').innerText = '전체 선택';
+            document.getElementById('toggle-all-buffer-btn').innerText = '전체 선택';
+            
             let dealerHtml = '';
             let bufferHtml = '';
             
@@ -623,7 +648,7 @@
                 const html = `
                     <label class="flex items-center justify-between p-3 rounded-lg border dark:border-dark-border cursor-pointer bg-white dark:bg-dark-surface">
                         <div class="flex items-center gap-3">
-                            <input type="checkbox" name="multi-char-select" value="${char.id}" class="w-4 h-4 accent-primary">
+                            <input type="checkbox" name="multi-char-select" value="${char.id}" data-char-type="${char.type}" class="w-4 h-4 accent-primary">
                             <span class="font-bold text-sm text-primary dark:text-dark-text truncate">${char.name} <span class="text-zinc-400 dark:text-dark-text-muted">${formattedStat}${noteDisplay}</span></span>
                         </div>
                     </label>`;
@@ -633,6 +658,22 @@
             mD.innerHTML = dealerHtml;
             mB.innerHTML = bufferHtml;
             document.getElementById('add-char-modal').classList.add('active');
+        }
+
+        function toggleAllChars(type) {
+            const containerId = type === 'dealer' ? 'modal-dealer-list' : 'modal-buffer-list';
+            const btnId = type === 'dealer' ? 'toggle-all-dealer-btn' : 'toggle-all-buffer-btn';
+            const container = document.getElementById(containerId);
+            const btn = document.getElementById(btnId);
+            const checkboxes = container.querySelectorAll(`input[name="multi-char-select"][data-char-type="${type}"]`);
+            
+            const isAllSelected = btn.innerText === '전체 해제';
+            
+            checkboxes.forEach(cb => {
+                cb.checked = !isAllSelected;
+            });
+
+            btn.innerText = isAllSelected ? '전체 선택' : '전체 해제';
         }
 
         function submitMultiAdd() {
@@ -776,6 +817,8 @@
         // --- 던담 불러오기 관련 로직 시작 ---
 
         function openDundamModal() {
+            // 모달 열 때 기본적으로 체크박스를 선택 상태로 설정
+            document.querySelectorAll('input[name="update-option"]').forEach(cb => cb.checked = true);
             document.getElementById('dundam-load-modal').classList.add('active');
         }
 
@@ -943,11 +986,16 @@
         }
         // --- 던담 불러오기 관련 로직 끝 ---
 
-        // --- 수치 포맷팅 헬퍼 함수 추가 ---
+        // --- 수치 포맷팅 헬퍼 함수 수정 ---
         function formatStat(stat, type) {
             if (type === 'dealer') {
-                // 입력값이 문자열일 수 있으므로 Number로 변환
-                return Number(stat).toFixed(1);
+                // 딜러: 선택된 소수점 자릿수만큼 버림 처리
+                const value = Number(stat);
+                const power = Math.pow(10, state.decimalPlaces);
+                const flooredValue = Math.floor(value * power) / power;
+                
+                // .toFixed()를 사용하여 지정된 소수점 자릿수로 포맷팅
+                return flooredValue.toFixed(state.decimalPlaces);
             } else {
                 // 버퍼: 3자리마다 콤마 찍기 (예: 6824090 -> 6,824,090)
                 return Number(stat).toLocaleString('ko-KR');
@@ -1141,7 +1189,7 @@
                                 </div>
                             </div>
                             <div class="flex flex-wrap gap-1.5">
-                                ${membersHtml || '<span class="w-full text-xs text-zinc-400 dark:text-dark-text-muted italic text-center py-2">캐릭터 없음</span>'}
+                                ${membersHtml || '<span class="w-full text-xs text-zinc-400 dark:text-dark-text-muted italic text-center py-2">멤버 없음</span>'}
                             </div>
                         </div>
                     `;
@@ -1208,10 +1256,11 @@
                     }
                     state = { ...state, ...loadedData };
                     if (state.darkMode === undefined) state.darkMode = false;
+                    if (state.decimalPlaces === undefined) state.decimalPlaces = 1; // 로드 시 초기값 설정
                     
                     save();
                     applyDarkMode();
-                    render();
+                    init(); // 초기화 함수 호출로 UI 업데이트
                     alert("데이터가 성공적으로 로드되었습니다.");
                 } catch(err) {
                     alert('올바른 데이터 파일이 아닙니다. (' + err.message + ')');
