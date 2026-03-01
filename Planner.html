@@ -191,7 +191,13 @@
             <!-- 사이드바: 캐릭터 관리 -->
             <aside class="lg:col-span-5 xl:col-span-4">
                 <div class="card p-6 shadow-sm bg-white dark:bg-dark-surface border border-zinc-200 dark:border-dark-border">
-                    <h3 class="font-bold text-lg mb-4 border-b dark:border-dark-border pb-3 text-primary dark:text-dark-text">캐릭터 관리</h3>
+                    <!-- 헤더 수정: 모험단 불러오기 버튼 추가 -->
+                    <div class="flex justify-between items-center mb-4 border-b dark:border-dark-border pb-3">
+                        <h3 class="font-bold text-lg text-primary dark:text-dark-text">캐릭터 관리</h3>
+                        <button onclick="openDundamModal()" class="text-sm bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors px-3 py-1.5 rounded-lg text-primary dark:text-dark-text font-bold">
+                            모험단 불러오기
+                        </button>
+                    </div>
                     
                     <!-- 캐릭터 등록 폼 -->
                     <div class="space-y-3 mb-8 bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-xl border border-zinc-100 dark:border-dark-border">
@@ -323,7 +329,6 @@
     <!-- 세트 추가/수정 모달 (통합) -->
     <div id="add-set-modal" class="modal">
         <div class="bg-white dark:bg-dark-surface p-8 rounded-2xl shadow-2xl max-w-4xl w-full mx-4 border dark:border-dark-border">
-            <!-- ID 추가: 동적 타이틀 변경 -->
             <h4 id="set-modal-title" class="font-bold text-2xl mb-4 text-primary dark:text-dark-text">새 세트(파티) 구성</h4>
             <p class="text-sm text-zinc-500 dark:text-dark-text-muted mb-6">해당 컨텐츠에 포함된 캐릭터 중 원하는 인원을 선택하여 세트를 만듭니다.</p>
             
@@ -345,8 +350,39 @@
 
             <div class="flex justify-end gap-3 pt-4 border-t dark:border-dark-border">
                 <button onclick="closeAddSetModal()" class="px-6 py-3 text-sm font-bold border dark:border-dark-border rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors text-primary dark:text-dark-text">취소</button>
-                <!-- ID 추가 및 함수 변경: submitSetForm() -->
                 <button id="set-modal-submit-btn" onclick="submitSetForm()" class="px-6 py-3 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">세트 생성</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 던담 불러오기 모달 추가 -->
+    <div id="dundam-load-modal" class="modal">
+        <div class="bg-white dark:bg-dark-surface p-8 rounded-2xl shadow-2xl max-w-2xl w-full mx-4 border dark:border-dark-border">
+            <h4 class="font-bold text-2xl mb-4 text-primary dark:text-dark-text">던담 모험단 캐릭터 불러오기</h4>
+            <p class="text-sm text-zinc-500 dark:text-dark-text-muted mb-6">
+                던담(dundam.xyz) 모험단 페이지에서 전체 내용을 복사하여 아래에 붙여넣으세요.<br>
+                모험단 이름은 자동으로 인식됩니다.
+            </p>
+
+            <textarea id="dundam-paste-area" rows="10" class="w-full border dark:border-dark-border rounded-lg px-4 py-3 mb-6 outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-600 bg-zinc-50 dark:bg-zinc-800/50 dark:text-dark-text resize-none font-mono text-sm" placeholder="여기에 붙여넣기..."></textarea>
+
+            <div class="mb-6">
+                <p class="font-bold text-sm mb-3 text-primary dark:text-dark-text">이미 등록된 캐릭터 처리 방법 (체크한 항목만 업데이트):</p>
+                <div class="flex gap-6">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="update-option" value="stat" class="w-4 h-4 accent-primary">
+                        <span class="text-sm text-primary dark:text-dark-text">수치 업데이트</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="update-option" value="note" class="w-4 h-4 accent-primary">
+                        <span class="text-sm text-primary dark:text-dark-text">메모 업데이트</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t dark:border-dark-border">
+                <button onclick="closeDundamModal()" class="px-6 py-3 text-sm font-bold border dark:border-dark-border rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors text-primary dark:text-dark-text">취소</button>
+                <button onclick="processDundamLoad()" class="px-6 py-3 text-sm font-bold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors">분석 및 추가</button>
             </div>
         </div>
     </div>
@@ -358,10 +394,9 @@
             activeContentId: null, 
             isEditMode: false, 
             editingCharId: null,
-            // 추가: 현재 수정 중인 세트 ID 저장
             editingSetId: null,
             sortMethod: 'desc',
-            darkMode: false // 다크모드 상태 추가
+            darkMode: false
         };
 
         function init() {
@@ -369,33 +404,27 @@
             if (saved) { 
                 state = { ...state, ...JSON.parse(saved) };
                 state.isEditMode = false;
-                state.editingSetId = null; // 초기화시 리셋
+                state.editingSetId = null;
                 state.contents.forEach(c => { if(!c.sets) c.sets = []; });
                 if (!state.sortMethod) state.sortMethod = 'desc';
-                // 저장된 다크모드 상태가 없으면 기본값 false
                 if (state.darkMode === undefined) state.darkMode = false;
             }
             document.getElementById('sort-select').value = state.sortMethod;
             
-            // 초기 로드 시 다크모드 적용
             applyDarkMode();
             render();
         }
 
         function save() {
             localStorage.setItem('party_data_v6', JSON.stringify(state));
-            // 저장 시 렌더링은 선택사항 (상태 변경 시 이미 렌더링 되므로)
-            // render(); 
         }
 
-        // 다크모드 토글 함수
         function toggleDarkMode() {
             state.darkMode = !state.darkMode;
             applyDarkMode();
-            save(); // 상태 저장
+            save();
         }
 
-        // 다크모드 적용 함수 (DOM 조작)
         function applyDarkMode() {
             if (state.darkMode) {
                 document.documentElement.classList.add('dark');
@@ -418,10 +447,10 @@
             if (!name || !stat) return;
             if (state.characters.some(c => c.name === name)) return alert('중복된 닉네임입니다.');
             
-            state.characters.push({ id: 'char_' + Date.now(), name, stat: parseInt(stat), note, type });
+            state.characters.push({ id: 'char_' + Date.now(), name, stat: Number(stat), note, type });
             nameInput.value = ''; statInput.value = ''; noteInput.value = '';
             save();
-            render(); // 저장 후 렌더링 추가
+            render();
         }
 
         function startInlineEdit(id) {
@@ -443,21 +472,18 @@
 
             if (!name || !stat) return;
 
-            // ▼▼▼ 중복 체크 로직 추가 ▼▼▼
-            // 현재 수정 중인 캐릭터(c.id === id)는 제외하고 이름이 같은지 확인
             if (state.characters.some(c => c.id !== id && c.name === name)) {
                 alert('중복된 닉네임입니다.');
                 return;
             }
-            // ▲▲▲ 여기까지 ▲▲▲
 
             char.name = name;
-            char.stat = parseInt(stat);
+            char.stat = Number(stat);
             char.note = note;
             char.type = type;
             state.editingCharId = null;
             save();
-            render(); // 저장 후 렌더링 추가
+            render();
         }
 
         function deleteCharacter(id) {
@@ -472,17 +498,15 @@
                 }
             });
             save();
-            render(); // 저장 후 렌더링 추가
+            render();
         }
 
-        // 정렬 변경 함수
         function changeSortMethod(method) {
             state.sortMethod = method;
             save();
-            render(); // 저장 후 렌더링 추가
+            render();
         }
 
-        // 정렬된 캐릭터 목록 가져오기
         function getSortedCharacters() {
             const chars = [...state.characters];
             switch (state.sortMethod) {
@@ -505,7 +529,7 @@
             state.activeContentId = id;
             document.getElementById('new-content-name').value = '';
             save();
-            render(); // 저장 후 렌더링 추가
+            render();
         }
 
         function deleteContent() {
@@ -517,7 +541,7 @@
             state.contents = state.contents.filter(c => c.id !== state.activeContentId);
             state.activeContentId = state.contents.length > 0 ? state.contents[0].id : null;
             save();
-            render(); // 저장 후 렌더링 추가
+            render();
         }
 
         function renameContent() {
@@ -527,11 +551,10 @@
             if (newName && newName.trim()) { 
                 content.name = newName.trim(); 
                 save();
-                render(); // 저장 후 렌더링 추가
+                render();
             }
         }
 
-        // 컨텐츠 순서 변경 기능
         function moveContent(direction) {
             if (!state.activeContentId) return;
             const index = state.contents.findIndex(c => c.id === state.activeContentId);
@@ -544,10 +567,9 @@
             state.contents[index] = state.contents[targetIndex];
             state.contents[targetIndex] = temp;
             save();
-            render(); // 저장 후 렌더링 추가
+            render();
         }
 
-        // 클리어 토글
         function toggleCharClear(charId) {
             if (state.isEditMode) return;
             const content = state.contents.find(c => c.id === state.activeContentId);
@@ -556,8 +578,8 @@
             if (cc) { 
                 cc.isCleared = !cc.isCleared; 
                 save();
-                renderContentArea(); // 부분 렌더링
-                renderDashboard(); // 대시보드 업데이트
+                renderContentArea();
+                renderDashboard();
             }
         }
 
@@ -573,13 +595,13 @@
             
             members.forEach(m => m.isCleared = !allCleared);
             save();
-            renderContentArea(); // 부분 렌더링
-            renderDashboard(); // 대시보드 업데이트
+            renderContentArea();
+            renderDashboard();
         }
 
         function toggleEditMode() { 
             state.isEditMode = !state.isEditMode; 
-            renderContentArea(); // 부분 렌더링
+            renderContentArea();
         }
 
         // 모달 관리
@@ -589,7 +611,6 @@
             const mD = document.getElementById('modal-dealer-list');
             const mB = document.getElementById('modal-buffer-list');
             
-            // 성능 최적화: innerHTML을 반복문 밖에서 한 번만 실행
             let dealerHtml = '';
             let bufferHtml = '';
             
@@ -598,12 +619,13 @@
 
             availableChars.forEach(char => {
                 const noteDisplay = char.note ? ` ${char.note}` : '';
-                // 성능 최적화: 호버 효과 및 transition-colors 제거
+                // 수치 포맷팅 적용
+                const formattedStat = formatStat(char.stat, char.type);
                 const html = `
                     <label class="flex items-center justify-between p-3 rounded-lg border dark:border-dark-border cursor-pointer bg-white dark:bg-dark-surface">
                         <div class="flex items-center gap-3">
                             <input type="checkbox" name="multi-char-select" value="${char.id}" class="w-4 h-4 accent-primary">
-                            <span class="font-bold text-sm text-primary dark:text-dark-text truncate">${char.name} <span class="text-zinc-400 dark:text-dark-text-muted">${char.stat}${noteDisplay}</span></span>
+                            <span class="font-bold text-sm text-primary dark:text-dark-text truncate">${char.name} <span class="text-zinc-400 dark:text-dark-text-muted">${formattedStat}${noteDisplay}</span></span>
                         </div>
                     </label>`;
                 char.type === 'dealer' ? dealerHtml += html : bufferHtml += html;
@@ -620,7 +642,7 @@
             selected.forEach(cb => content.contentCharacters.push({ charId: cb.value, isCleared: false }));
             closeAddCharModal();
             save();
-            render(); // 저장 후 렌더링 추가
+            render();
         }
 
         function removeCharFromContent(charId) {
@@ -633,16 +655,15 @@
                 });
             }
             save();
-            renderContentArea(); // 부분 렌더링
+            renderContentArea();
             renderDashboard();
         }
 
-        // 변경: 세트 추가/수정 모달 열기 (통합 함수)
         function openSetModal(setId = null) {
             const content = state.contents.find(c => c.id === state.activeContentId);
             if (!content) return;
             
-            state.editingSetId = setId; // 수정할 세트 ID 설정 (없으면 null)
+            state.editingSetId = setId;
             
             const dContainer = document.getElementById('set-dealer-selection');
             const bContainer = document.getElementById('set-buffer-selection');
@@ -650,7 +671,6 @@
             const modalTitle = document.getElementById('set-modal-title');
             const submitBtn = document.getElementById('set-modal-submit-btn');
 
-            // 성능 최적화: innerHTML 버퍼링
             let dealerHtml = '';
             let bufferHtml = '';
             
@@ -659,14 +679,11 @@
                 targetSet = content.sets.find(s => s.id === setId);
             }
 
-            // 모달 UI 상태 설정 (추가 vs 수정)
             if (targetSet) {
-                // 수정 모드
                 modalTitle.innerText = "세트 구성 수정";
                 submitBtn.innerText = "세트 수정 완료";
                 nameInput.value = targetSet.name;
             } else {
-                // 추가 모드
                 modalTitle.innerText = "새 세트(파티) 구성";
                 submitBtn.innerText = "세트 생성";
                 nameInput.value = '';
@@ -684,16 +701,16 @@
             }
             
             sortedChars.forEach(char => {
-                // 수정 모드일 경우, 기존 세트에 포함된 캐릭터인지 확인하여 체크박스 상태 결정
                 const isChecked = targetSet && targetSet.charIds.includes(char.id);
                 const noteDisplay = char.note ? ` ${char.note}` : '';
+                // 수치 포맷팅 적용
+                const formattedStat = formatStat(char.stat, char.type);
                 
-                // 성능 최적화: 호버 효과 및 transition-colors 제거
                 const html = `
                     <label class="flex items-center justify-between p-3 rounded-lg border dark:border-dark-border bg-white dark:bg-dark-surface cursor-pointer">
                         <div class="flex items-center gap-3">
                             <input type="checkbox" name="set-member-select" value="${char.id}" class="w-4 h-4 accent-blue-600" ${isChecked ? 'checked' : ''}>
-                            <span class="font-bold text-sm text-primary dark:text-dark-text truncate">${char.name} <span class="text-zinc-400 dark:text-dark-text-muted">${char.stat}${noteDisplay}</span></span>
+                            <span class="font-bold text-sm text-primary dark:text-dark-text truncate">${char.name} <span class="text-zinc-400 dark:text-dark-text-muted">${formattedStat}${noteDisplay}</span></span>
                         </div>
                     </label>
                 `;
@@ -705,7 +722,6 @@
             document.getElementById('add-set-modal').classList.add('active');
         }
 
-        // 변경: 세트 폼 제출 (추가/수정 통합)
         function submitSetForm() {
             const content = state.contents.find(c => c.id === state.activeContentId);
             const nameInput = document.getElementById('new-set-name');
@@ -716,15 +732,13 @@
             let setName = nameInput.value.trim();
 
             if (state.editingSetId) {
-                // 수정 모드: 기존 세트 업데이트
                 const set = content.sets.find(s => s.id === state.editingSetId);
                 if (set) {
-                    if (!setName) setName = set.name; // 이름이 비어있으면 기존 이름 유지
+                    if (!setName) setName = set.name;
                     set.name = setName;
                     set.charIds = selected;
                 }
             } else {
-                // 추가 모드: 새 세트 생성
                 if (!setName) {
                     const currentSetCount = (content.sets || []).length;
                     setName = (currentSetCount + 1) + "파티";
@@ -739,9 +753,9 @@
             
             nameInput.value = '';
             closeAddSetModal();
-            state.editingSetId = null; // 수정 모드 종료
+            state.editingSetId = null;
             save();
-            renderContentArea(); // 부분 렌더링
+            renderContentArea();
         }
 
         function deleteSet(setId) {
@@ -749,16 +763,199 @@
             if (!content) return;
             content.sets = content.sets.filter(s => s.id !== setId);
             save();
-            renderContentArea(); // 부분 렌더링
+            renderContentArea();
         }
 
         function confirmResetAll() {
             if (confirm('모든 컨텐츠의 클리어 체크를 해제할까요?')) {
                 state.contents.forEach(c => c.contentCharacters.forEach(cc => cc.isCleared = false));
                 save();
-                render(); // 저장 후 렌더링 추가
+                render();
             }
         }
+
+        // --- 던담 불러오기 관련 로직 시작 ---
+
+        function openDundamModal() {
+            document.getElementById('dundam-load-modal').classList.add('active');
+        }
+
+        function closeDundamModal() {
+            document.getElementById('dundam-load-modal').classList.remove('active');
+            document.getElementById('dundam-paste-area').value = '';
+            // 체크박스 초기화
+            document.querySelectorAll('input[name="update-option"]').forEach(cb => cb.checked = false);
+        }
+
+        function parseNumberStr(str) {
+            // 쉼표 제거
+            str = str.replace(/,/g, '');
+            
+            // --- 수정된 로직 시작 ---
+            // 문자열에서 연속된 숫자들을 모두 추출합니다. 단위("억", "만" 등)는 무시됩니다.
+            const numbers = str.match(/\d+/g);
+
+            if (numbers) {
+                if (numbers.length >= 2) {
+                    // 숫자가 2개 이상 발견되면, 첫 번째 숫자와 두 번째 숫자를 '.'으로 연결하여 하나의 실수로 만듭니다.
+                    // 예: "548 억 729 만" -> ["548", "729"] -> 548.729
+                    // 예: "SomeUnit 123 OtherUnit 456" -> ["123", "456"] -> 123.456
+                    return parseFloat(`${numbers[0]}.${numbers[1]}`);
+                } else if (numbers.length === 1) {
+                    // 숫자가 1개만 발견되면 정수로 반환합니다. (버퍼 점수 등)
+                    // 예: "6824090" -> ["6824090"] -> 6824090
+                    return parseInt(numbers[0], 10);
+                }
+            }
+            // --- 수정된 로직 끝 ---
+
+            // Case 4: 소수점이 있는 숫자 형태 (기존 로직 유지)
+            if (/^\d+(\.\d+)?$/.test(str)) {
+                return parseFloat(str);
+            }
+
+            return 0;
+        }
+
+        function parseDundamText(text) {
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            const parsedChars = [];
+            let adventureName = '';
+
+            // 모험단 이름 찾기 (예: 7~8번째 줄 근처 "모험단" 텍스트 다음 줄)
+            for (let i = 0; i < Math.min(lines.length, 20); i++) {
+                if (lines[i] === '모험단' && i + 1 < lines.length) {
+                    adventureName = lines[i + 1];
+                    break;
+                }
+            }
+
+            if (!adventureName) {
+                alert('모험단 이름을 찾을 수 없습니다. 올바른 데이터를 붙여넣었는지 확인해주세요.');
+                return [];
+            }
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                // 모험단 이름으로 끝나는 줄 찾기
+                if (line.endsWith(adventureName) && line.length > adventureName.length) {
+                    const charName = line.substring(0, line.length - adventureName.length);
+                    let type = 'dealer'; // 기본값
+                    let stat = 0;
+                    let note = '';
+
+                    // 다음 몇 줄을 검사하여 수치 정보 찾기
+                    let j = i + 1;
+                     // 명성치 줄 건너뛰기 (숫자로만 구성된 줄)
+                     if (j < lines.length && /^\d+$/.test(lines[j])) {
+                        j++;
+                    }
+
+                    if (j < lines.length) {
+                        let statLine = lines[j];
+
+                        if (statLine.startsWith('버프점수')) {
+                            type = 'buffer';
+                            stat = parseNumberStr(statLine.replace('버프점수', ''));
+                        } else if (statLine.startsWith('4인')) {
+                            // "4인" 수치가 있는 경우 (우선순위 높음)
+                            type = 'dealer';
+                            stat = parseNumberStr(statLine.replace('4인', ''));
+                            // 다음 줄에 "랭킹" 수치가 있는지 확인하여 메모로 저장
+                            if (j + 1 < lines.length) {
+                                const nextLine = lines[j+1];
+                                if (nextLine.startsWith('랭킹')) {
+                                    const secondaryStat = parseNumberStr(nextLine.replace('랭킹', ''));
+                                    note = secondaryStat.toString();
+                                }
+                            }
+                        } else if (statLine.startsWith('랭킹')) {
+                            // "랭킹" 수치만 있는 경우
+                            type = 'dealer';
+                            stat = parseNumberStr(statLine.replace('랭킹', ''));
+                        }
+                    }
+
+                    if (stat > 0) {
+                        parsedChars.push({ name: charName, type, stat, note });
+                    }
+                }
+            }
+            return parsedChars;
+        }
+
+        function processDundamLoad() {
+            const text = document.getElementById('dundam-paste-area').value;
+            const updateOptions = Array.from(document.querySelectorAll('input[name="update-option"]:checked')).map(cb => cb.value);
+            const updateStat = updateOptions.includes('stat');
+            const updateNote = updateOptions.includes('note');
+
+            if (!text) { alert('붙여넣은 내용이 없습니다.'); return; }
+
+            const parsedResults = parseDundamText(text);
+
+            if (parsedResults.length === 0) {
+                // parseDundamText 내부에서 얼럿을 띄우므로 여기선 리턴만 함
+                return;
+            }
+
+            let addedCount = 0;
+            let updatedCount = 0;
+            let skippedCount = 0;
+
+            parsedResults.forEach(parsedChar => {
+                const existingCharIndex = state.characters.findIndex(c => c.name === parsedChar.name);
+
+                if (existingCharIndex !== -1) {
+                    // 이미 존재하는 캐릭터
+                    let isUpdated = false;
+                    if (updateStat) {
+                        state.characters[existingCharIndex].stat = parsedChar.stat;
+                        state.characters[existingCharIndex].type = parsedChar.type;
+                        isUpdated = true;
+                    }
+                    if (updateNote && parsedChar.note) {
+                         state.characters[existingCharIndex].note = parsedChar.note;
+                         isUpdated = true;
+                    }
+
+                    if (isUpdated) {
+                        updatedCount++;
+                    } else {
+                        skippedCount++;
+                    }
+                } else {
+                    // 새 캐릭터 추가
+                    state.characters.push({
+                        id: 'char_' + Date.now() + Math.random().toString(36).substr(2, 5),
+                        name: parsedChar.name,
+                        stat: parsedChar.stat,
+                        type: parsedChar.type,
+                        note: parsedChar.note
+                    });
+                    addedCount++;
+                }
+            });
+
+            save();
+            render();
+            closeDundamModal();
+            alert(`처리 완료:\n- 추가됨: ${addedCount}명\n- 업데이트됨: ${updatedCount}명\n- 건너뜀: ${skippedCount}명`);
+        }
+        // --- 던담 불러오기 관련 로직 끝 ---
+
+        // --- 수치 포맷팅 헬퍼 함수 추가 ---
+        function formatStat(stat, type) {
+            if (type === 'dealer') {
+                // 입력값이 문자열일 수 있으므로 Number로 변환
+                return Number(stat).toFixed(1);
+            } else {
+                // 버퍼: 3자리마다 콤마 찍기 (예: 6824090 -> 6,824,090)
+                return Number(stat).toLocaleString('ko-KR');
+            }
+        }
+        // ---------------------------------
+
 
         // 렌더링 함수들
         function render() {
@@ -770,7 +967,6 @@
 
         function renderDashboard() {
             const grid = document.getElementById('dashboard-grid');
-            // 성능 최적화: innerHTML 버퍼링
             let html = '';
             state.contents.forEach(c => {
                 const total = c.contentCharacters.length;
@@ -793,7 +989,6 @@
             const dList = document.getElementById('dealer-list');
             const bList = document.getElementById('buffer-list');
             
-            // 성능 최적화: DOM 조작 최소화를 위한 버퍼링
             let dealerHtml = '';
             let bufferHtml = '';
 
@@ -823,11 +1018,13 @@
                         </div>
                     `;
                 } else {
+                    // 수치 포맷팅 적용
+                    const formattedStat = formatStat(char.stat, char.type);
                     charHtml = `
                         <div class="flex flex-col p-3 border dark:border-dark-border rounded-lg bg-white dark:bg-dark-surface hover:border-zinc-300 dark:hover:border-zinc-500 transition-colors group relative border-f4f4f5">
                             <div class="flex items-center gap-1.5 overflow-hidden text-sm font-bold">
                                 <span class="truncate text-primary dark:text-dark-text">${char.name}</span>
-                                <span class="text-zinc-400 dark:text-dark-text-muted">${char.stat}${noteDisplay}</span>
+                                <span class="text-zinc-400 dark:text-dark-text-muted">${formattedStat}${noteDisplay}</span>
                             </div>
                             <div class="absolute top-2 right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-dark-surface pl-1 rounded-bl-lg hover-actions">
                                 <button onclick="startInlineEdit('${char.id}')" class="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-zinc-400 dark:text-zinc-500 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
@@ -846,7 +1043,6 @@
         function renderTabs() {
             const container = document.getElementById('content-tabs');
             
-            // 성능 최적화: innerHTML 버퍼링
             let tabsHtml = '';
             state.contents.forEach((c, idx) => {
                 const active = state.activeContentId === c.id;
@@ -894,10 +1090,8 @@
             
             const editBtn = document.getElementById('edit-mode-btn');
             editBtn.innerText = state.isEditMode ? '수정 완료' : '수정 모드';
-            // 다크모드 클래스 추가
             editBtn.className = `px-5 py-2 border rounded-lg text-sm font-bold transition-colors shadow-sm ${state.isEditMode ? 'bg-orange-500 border-orange-500 text-white dark:bg-orange-600 dark:border-orange-600' : 'bg-white dark:bg-dark-surface border-zinc-200 dark:border-dark-border text-primary dark:text-dark-text hover:bg-zinc-50 dark:hover:bg-zinc-700'}`;
 
-            // 세트 렌더링 최적화 (버퍼링)
             let setsHtml = '';
             if (content.sets && content.sets.length > 0) {
                 content.sets.forEach(set => {
@@ -916,11 +1110,13 @@
 
                         const clearedClass = m.isCleared ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' : 'bg-white dark:bg-dark-surface shadow-sm border-zinc-100 dark:border-dark-border';
                         const noteDisplay = char.note ? ` ${char.note}` : '';
+                        // 수치 포맷팅 적용
+                        const formattedStat = formatStat(char.stat, char.type);
 
                         return `
                             <div class="flex items-center justify-center gap-1.5 p-2 rounded border ${clearedClass} text-sm font-bold">
                                 <span class="truncate ${m.isCleared ? '' : 'text-primary dark:text-dark-text'}">${typePrefix}${char.name}</span>
-                                <span class="${m.isCleared ? 'text-emerald-600 dark:text-emerald-300' : 'text-zinc-400 dark:text-dark-text-muted'}">${char.stat}${noteDisplay}</span>
+                                <span class="${m.isCleared ? 'text-emerald-600 dark:text-emerald-300' : 'text-zinc-400 dark:text-dark-text-muted'}">${formattedStat}${noteDisplay}</span>
                             </div>
                         `;
                     }).join('');
@@ -956,7 +1152,6 @@
             }
             sGrid.innerHTML = setsHtml;
 
-            // 개별 캐릭터 렌더링 최적화 (버퍼링)
             let dealerGridHtml = '';
             let bufferGridHtml = '';
             const ccList = content.contentCharacters.map(cc => ({ ...cc, char: state.characters.find(c => c.id === cc.charId) })).filter(i => i.char);
@@ -965,12 +1160,14 @@
                 const { char, isCleared } = item;
                 const charCardClass = `char-card card p-4 flex items-center justify-between shadow-sm bg-white dark:bg-dark-surface border-f4f4f5 dark:border-dark-border ${isCleared ? 'cleared' : ''} ${state.isEditMode ? 'border-dashed border-zinc-300 dark:border-zinc-500' : 'border'}`;
                 const noteDisplay = char.note ? ` ${char.note}` : '';
+                // 수치 포맷팅 적용
+                const formattedStat = formatStat(char.stat, char.type);
 
                 const charHtml = `
                     <div class="${charCardClass}" onclick="toggleCharClear('${char.id}')">
                         <div class="flex items-center gap-2 overflow-hidden text-base font-bold">
                             <span class="truncate ${isCleared ? '' : 'text-primary dark:text-dark-text'}">${char.name}</span>
-                            <span class="${isCleared ? 'text-emerald-600 dark:text-emerald-300' : 'text-zinc-400 dark:text-dark-text-muted'}">${char.stat}${noteDisplay}</span>
+                            <span class="${isCleared ? 'text-emerald-600 dark:text-emerald-300' : 'text-zinc-400 dark:text-dark-text-muted'}">${formattedStat}${noteDisplay}</span>
                         </div>
                         <div class="flex items-center gap-2">
                             ${state.isEditMode ? `
@@ -988,7 +1185,6 @@
         }
 
         function downloadBackup() {
-            // 저장 전에 현재 상태를 확실히 반영
             save();
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
             const a = document.createElement('a'); a.href = dataStr; a.download = `party_backup_${Date.now()}.json`; a.click();
@@ -1008,16 +1204,13 @@
             reader.onload = (e) => {
                 try {
                     const loadedData = JSON.parse(e.target.result);
-                    // 기본 데이터 구조 확인
                     if (!loadedData.characters || !loadedData.contents) {
                         throw new Error("Invalid data structure");
                     }
                     state = { ...state, ...loadedData };
-                    // 로드된 데이터에 다크모드 설정이 없으면 기본값 false 적용
                     if (state.darkMode === undefined) state.darkMode = false;
                     
                     save();
-                    // 다크모드 상태 적용 및 렌더링
                     applyDarkMode();
                     render();
                     alert("데이터가 성공적으로 로드되었습니다.");
@@ -1033,7 +1226,7 @@
         function closeAddCharModal() { document.getElementById('add-char-modal').classList.remove('active'); }
         function closeAddSetModal() { 
             document.getElementById('add-set-modal').classList.remove('active'); 
-            state.editingSetId = null; // 모달 닫을 때 수정 상태 초기화
+            state.editingSetId = null;
         }
         
         window.onload = init;
