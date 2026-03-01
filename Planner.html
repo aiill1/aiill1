@@ -474,7 +474,7 @@
         <div class="bg-white dark:bg-dark-surface p-8 rounded-2xl shadow-2xl max-w-2xl w-full mx-4 border dark:border-dark-border">
             <h4 class="font-bold text-2xl mb-4 text-primary dark:text-dark-text">던담 모험단 캐릭터 불러오기</h4>
             <p class="text-sm text-zinc-500 dark:text-dark-text-muted mb-6">
-                던담(dundam.xyz) 모험단 페이지에서 전체 내용을 복사(Ctrl+A 후 ctrl+C)하여 아래에 붙여넣으세요.<br>
+                던담(dundam.xyz) 모험단 페이지에서 전체 내용을 복사하여 아래에 붙여넣으세요.<br>
             </p>
 
             <textarea id="dundam-paste-area" rows="10" class="w-full border dark:border-dark-border rounded-lg px-4 py-3 mb-6 outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-600 bg-zinc-50 dark:bg-zinc-800/50 dark:text-dark-text resize-none font-mono text-sm" placeholder="여기에 붙여넣기..."></textarea>
@@ -1276,14 +1276,37 @@
                     if (j < lines.length) {
                         let statLine = lines[j];
 
+                        // 버퍼 점수 확인 (기존 방식)
                         if (statLine.startsWith('버프점수')) {
                             type = 'buffer';
                             stat = parseNumberStr(statLine.replace('버프점수', ''));
-                        } else if (statLine.startsWith('4인')) {
-                            // "4인" 수치가 있는 경우 (우선순위 높음)
+                        } 
+                        // --- 수정된 로직 시작 ---
+                        // 버퍼 점수 확인 (새로운 방식: "2인" 줄을 발견했을 때)
+                        else if (statLine.startsWith('2인')) {
+                            // 이 줄이 '2인' 수치임. 버퍼일 가능성 존재.
+                            // 2줄 뒤에 '4인' 수치가 있는지 확인하여 버퍼인지 최종 판단.
+                            if (j + 2 < lines.length) {
+                                const lineAfterNext = lines[j+2];
+                                if (lineAfterNext.startsWith('4인')) {
+                                    // 버퍼 확정
+                                    type = 'buffer';
+                                    // 4인 수치를 메인 stat으로 설정
+                                    stat = parseNumberStr(lineAfterNext.replace('4인', ''));
+                                    // 현재 줄(2인 수치)을 메모로 설정
+                                    note = '' + parseNumberStr(statLine.replace('2인', '')).toLocaleString('ko-KR');
+                                }
+                            }
+                            // 만약 '4인' 줄이 없다면 이 캐릭터는 무시됨 (stat이 0이므로). 
+                            // 딜러가 '2인' 스탯만 가지는 경우는 없다고 가정.
+                        }
+                        // --- 수정된 로직 끝 ---
+
+                        // 딜러 확인 (기존 방식)
+                        // 위에서 버퍼 로직에 걸리지 않은 '4인' 줄은 딜러의 수치로 판단
+                        else if (statLine.startsWith('4인')) {
                             type = 'dealer';
                             stat = parseNumberStr(statLine.replace('4인', ''));
-                            // 다음 줄에 "랭킹" 수치가 있는지 확인하여 메모로 저장
                             if (j + 1 < lines.length) {
                                 const nextLine = lines[j+1];
                                 if (nextLine.startsWith('랭킹')) {
@@ -1292,7 +1315,6 @@
                                 }
                             }
                         } else if (statLine.startsWith('랭킹')) {
-                            // "랭킹" 수치만 있는 경우
                             type = 'dealer';
                             stat = parseNumberStr(statLine.replace('랭킹', ''));
                         }
