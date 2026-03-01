@@ -730,7 +730,8 @@
                         <span class="tooltip-wrapper">
                             <span class="tooltip-icon">?</span>
                             <span class="tooltip-text tooltip-down">
-                                닉네임과 모험단은 띄어쓰기 없이 붙여서 입력하세요.<br><br>
+                                닉네임과 모험단은 띄어쓰기 없이 붙여서 입력하세요.<br>
+								모험단으로 동일인을 판단합니다.<br><br>
                                 숫자 뒤에 텍스트를 붙여 입력할 수 있습니다. (예: 225뮤즈)<br>
                                 이 경우 숫자는 계산에 사용되고 텍스트는 결과에 표시됩니다.<br><br>
                                 <strong>'무리' 로직:</strong> 수치 앞에 "무리" 또는 "(무리)"를 입력하면, 해당 캐릭터들은 한 파티에 2명 이상 배정되지 않습니다. (예: 무리250)
@@ -885,7 +886,7 @@
                     <h2>
                         <span>메모장</span>
                     </h2>
-                    <p style="font-size: 0.85em; color: var(--text-muted-color); margin-top: -10px; margin-bottom: 15px;">* 메모장이나 엑셀 입력 시 딜러 수치 순서는 무관합니다. (자동으로 높은 값이 메인딜로 배정됨)</p>
+                    <p style="font-size: 0.85em; color: var(--text-muted-color); margin-top: -10px; margin-bottom: 15px;"> 메모장이나 엑셀 입력 시 딜러 수치 순서는 무관합니다. (자동으로 높은 값이 메인딜로 배정됨)<br>모험단으로 동일인을 판단합니다.</p>
                     <div id="memo-pad-container"></div>
                 </div>
             </div>
@@ -2757,3 +2758,4 @@ function copyResultsToClipboard() {
     </script>
 </body>
 </html>
+
