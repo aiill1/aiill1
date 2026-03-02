@@ -330,10 +330,10 @@ input[type=number] {
                     <!-- 정렬 및 소수점 컨트롤 추가 -->
                     <div class="flex justify-end items-center mb-4 gap-2">
                         <select id="decimal-select" onchange="changeDecimalPlaces(this.value)" class="border dark:border-dark-border rounded-lg px-3 py-2 text-sm bg-white dark:bg-dark-surface outline-none text-primary dark:text-dark-text cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors" title="딜러 소수점 자릿수">
-                            <option value="0">소수점 0자리</option>
-                            <option value="1" selected>소수점 1자리</option>
-                            <option value="2">소수점 2자리</option>
-                            <option value="3">소수점 3자리</option>
+                            <option value="0">소수점 표시 없음</option>
+                            <option value="1" selected>소수점 1자리 표시</option>
+                            <option value="2">소수점 2자리 표시</option>
+                            <option value="3">소수점 3자리 표시</option>
                         </select>
                         <!-- 정렬 선택 대신 벞력 버림 선택으로 교체 -->
                         <select id="buffer-truncation-select" onchange="changeBufferTruncation(this.value)" class="border dark:border-dark-border rounded-lg px-3 py-2 text-sm bg-white dark:bg-dark-surface outline-none text-primary dark:text-dark-text cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors" title="버퍼 수치 뒷자리 버림">
