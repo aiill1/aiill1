@@ -1,3 +1,5 @@
+--- START OF FILE Planner.html ---
+
 <!DOCTYPE html>
 <html lang="ko" class="">
 <head>
@@ -27,6 +29,17 @@
         }
     </script>
     <style>
+	/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}		
         body {
             font-family: 'Noto Sans KR', sans-serif;
         }
@@ -266,23 +279,55 @@
                         </button>
                     </div>
                     
-                    <!-- 캐릭터 등록 폼 -->
+                    <!-- 캐릭터 등록 폼 수정: 메모와 직업 위치 변경 및 비율 조정 -->
                     <div class="space-y-3 mb-8 bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-xl border border-zinc-100 dark:border-dark-border">
                         <div class="flex gap-2">
                             <input id="char-name" type="text" placeholder="닉네임" class="w-full border dark:border-dark-border rounded-lg px-4 py-3 text-base outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-600 text-primary dark:text-dark-text bg-white dark:bg-dark-surface">
                         </div>
                         <div class="flex gap-2">
                             <input id="char-stat" type="number" placeholder="수치" class="w-1/2 border dark:border-dark-border rounded-lg px-4 py-3 text-base outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-600 text-primary dark:text-dark-text bg-white dark:bg-dark-surface">
-                            <input id="char-note" type="text" placeholder="메모" class="w-1/2 border dark:border-dark-border rounded-lg px-4 py-3 text-base outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-600 text-primary dark:text-dark-text bg-white dark:bg-dark-surface">
+                            <input id="char-job" type="text" placeholder="직업 (예: 넨마스터)" class="w-1/2 border dark:border-dark-border rounded-lg px-4 py-3 text-base outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-600 text-primary dark:text-dark-text bg-white dark:bg-dark-surface">
                         </div>
-                        <div>
-                            <select id="char-type" class="w-full border dark:border-dark-border rounded-lg px-3 py-3 text-base bg-white dark:bg-dark-surface outline-none text-primary dark:text-dark-text">
+                        <div class="flex gap-2">
+                            <!-- 메모 2/3, 타입 1/3 비율 적용 -->
+                            <input id="char-note" type="text" placeholder="메모" class="w-2/3 border dark:border-dark-border rounded-lg px-4 py-3 text-base outline-none focus:ring-2 focus:ring-zinc-200 dark:focus:ring-zinc-600 text-primary dark:text-dark-text bg-white dark:bg-dark-surface">
+                            <select id="char-type" class="w-1/3 border dark:border-dark-border rounded-lg px-3 py-3 text-base bg-white dark:bg-dark-surface outline-none text-primary dark:text-dark-text">
                                 <option value="dealer">딜러</option>
                                 <option value="buffer">버퍼</option>
                             </select>
                         </div>
                         <button onclick="addCharacter()" class="w-full bg-primary dark:bg-zinc-700 text-white py-3.5 rounded-lg text-base font-bold hover:bg-primary-hover dark:hover:bg-zinc-600 transition-colors">새 캐릭터 등록</button>
                     </div>
+
+                    <!-- 캐릭터 표시 옵션 선택 -->
+                    <div class="mb-4">
+    <h4 class="text-xs font-bold text-zinc-400 dark:text-dark-text-muted mb-2 uppercase tracking-widest text-right">
+        표시할 정보 선택
+    </h4>
+    
+    <div class="flex flex-wrap gap-3 justify-end">
+        <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" id="disp-opt-type" onchange="toggleDisplayOption('type')" class="w-3.5 h-3.5 accent-primary">
+            <span class="text-sm text-primary dark:text-dark-text">딜벞</span>
+        </label>
+        <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" id="disp-opt-name" onchange="toggleDisplayOption('name')" class="w-3.5 h-3.5 accent-primary">
+            <span class="text-sm text-primary dark:text-dark-text">닉네임</span>
+        </label>
+        <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" id="disp-opt-stat" onchange="toggleDisplayOption('stat')" class="w-3.5 h-3.5 accent-primary">
+            <span class="text-sm text-primary dark:text-dark-text">수치</span>
+        </label>
+        <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" id="disp-opt-note" onchange="toggleDisplayOption('note')" class="w-3.5 h-3.5 accent-primary">
+            <span class="text-sm text-primary dark:text-dark-text">메모</span>
+        </label>
+        <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" id="disp-opt-job" onchange="toggleDisplayOption('job')" class="w-3.5 h-3.5 accent-primary">
+            <span class="text-sm text-primary dark:text-dark-text">전직</span>
+        </label>
+    </div>
+</div>
 
                     <!-- 정렬 및 소수점 컨트롤 추가 -->
                     <div class="flex justify-end items-center mb-4 gap-2">
@@ -510,7 +555,14 @@
             editingSetId: null,
             sortMethod: 'desc',
             decimalPlaces: 1, // 소수점 자릿수 상태 추가 (기본값 1)
-            darkMode: false
+            darkMode: false,
+            displayOptions: {
+                type: true,
+                name: true,
+                stat: true,
+                note: true,
+                job: true
+            } // 표시 옵션 상태 추가
         };
 
         // --- 메모장 관련 스크립트 시작 ---
@@ -800,13 +852,36 @@
                 if (!state.sortMethod) state.sortMethod = 'desc';
                 if (state.decimalPlaces === undefined) state.decimalPlaces = 1; // 초기값 설정
                 if (state.darkMode === undefined) state.darkMode = false;
+                
+                // 기존 데이터 호환성 처리: job 필드가 없는 경우 '미정'으로 설정
+                state.characters.forEach(c => {
+                    if (!c.hasOwnProperty('job')) {
+                        c.job = '미정';
+                    }
+                });
+
+                // displayOptions 초기화 (저장된 값이 없으면 기본값 사용)
+                if (!state.displayOptions) {
+                    state.displayOptions = { type: true, name: true, stat: true, note: true, job: true };
+                }
             }
             document.getElementById('sort-select').value = state.sortMethod;
             document.getElementById('decimal-select').value = state.decimalPlaces; // 소수점 선택 셀렉트 초기화
             
+            // 표시 옵션 체크박스 초기화
+            initDisplayOptionCheckboxes();
+
             applyDarkMode();
             render();
             // 메모장 상태 로드는 toggleNotepad() 호출 시 수행
+        }
+
+        function initDisplayOptionCheckboxes() {
+            document.getElementById('disp-opt-type').checked = state.displayOptions.type;
+            document.getElementById('disp-opt-name').checked = state.displayOptions.name;
+            document.getElementById('disp-opt-stat').checked = state.displayOptions.stat;
+            document.getElementById('disp-opt-note').checked = state.displayOptions.note;
+            document.getElementById('disp-opt-job').checked = state.displayOptions.job;
         }
 
         function save() {
@@ -832,17 +907,19 @@
             const nameInput = document.getElementById('char-name');
             const statInput = document.getElementById('char-stat');
             const noteInput = document.getElementById('char-note');
+            const jobInput = document.getElementById('char-job'); // 직업 입력 요소 가져오기
             
             const name = nameInput.value.trim();
             const stat = statInput.value.trim();
             const note = noteInput.value.trim();
+            const job = jobInput.value.trim() || '미정'; // 직업 값 가져오기, 없으면 '미정'
             const type = document.getElementById('char-type').value;
             
             if (!name || !stat) return;
             if (state.characters.some(c => c.name === name)) return alert('중복된 닉네임입니다.');
             
-            state.characters.push({ id: 'char_' + Date.now(), name, stat: Number(stat), note, type });
-            nameInput.value = ''; statInput.value = ''; noteInput.value = '';
+            state.characters.push({ id: 'char_' + Date.now(), name, stat: Number(stat), note, type, job });
+            nameInput.value = ''; statInput.value = ''; noteInput.value = ''; jobInput.value = ''; // 입력 필드 초기화
             save();
             render();
         }
@@ -862,6 +939,7 @@
             const name = document.getElementById(`edit-name-${id}`).value.trim();
             const stat = document.getElementById(`edit-stat-${id}`).value.trim();
             const note = document.getElementById(`edit-note-${id}`).value.trim();
+            const job = document.getElementById(`edit-job-${id}`).value.trim() || '미정'; // 직업 값 가져오기
             const type = document.getElementById(`edit-type-${id}`).value;
 
             if (!name || !stat) return;
@@ -875,6 +953,7 @@
             char.stat = Number(stat);
             char.note = note;
             char.type = type;
+            char.job = job; // 직업 정보 업데이트
             state.editingCharId = null;
             save();
             render();
@@ -905,6 +984,12 @@
             state.decimalPlaces = parseInt(value, 10);
             save();
             render();
+        }
+
+        function toggleDisplayOption(option) {
+            state.displayOptions[option] = document.getElementById(`disp-opt-${option}`).checked;
+            save();
+            render(); // 모든 영역 재렌더링
         }
 
         function getSortedCharacters() {
@@ -1004,6 +1089,36 @@
             renderContentArea();
         }
 
+        // 캐릭터 정보 포맷팅 헬퍼 함수 (순서 수정됨: 딜벞, 닉네임, 수치, 메모, 전직)
+        function formatCharDisplay(char) {
+            const opts = state.displayOptions;
+            let parts = [];
+
+            // 1. 딜벞 (Type)
+            if (opts.type) {
+                const typeStr = char.type === 'dealer' ? '[딜]' : '[벞]';
+                parts.push(`<span class="${char.type === 'dealer' ? 'text-zinc-500 dark:text-zinc-400' : 'text-emerald-500 dark:text-emerald-400'} font-medium shrink-0">${typeStr}</span>`);
+            }
+            // 2. 닉네임 (Name)
+            if (opts.name) {
+                parts.push(`<span class="font-bold truncate">${char.name}</span>`);
+            }
+            // 3. 수치 (Stat)
+            if (opts.stat) {
+                parts.push(`<span class="${char.type === 'dealer' ? 'text-zinc-600 dark:text-zinc-300' : 'text-emerald-600 dark:text-emerald-300'} font-bold shrink-0">${formatStat(char.stat, char.type)}</span>`);
+            }
+            // 4. 메모 (Note)
+            if (opts.note && char.note) {
+                parts.push(`<span class="text-zinc-400 dark:text-zinc-500 text-xs truncate">${char.note}</span>`);
+            }
+            // 5. 전직 (Job)
+            if (opts.job && char.job) {
+                parts.push(`<span class="text-zinc-500 dark:text-zinc-400 text-xs shrink-0">${char.job}</span>`);
+            }
+
+            return parts.join(' ');
+        }
+
         // 모달 관리
         function openAddCharModal() {
             const content = state.contents.find(c => c.id === state.activeContentId);
@@ -1022,14 +1137,14 @@
                 .filter(char => !content.contentCharacters.some(cc => cc.charId === char.id));
 
             availableChars.forEach(char => {
-                const noteDisplay = char.note ? ` ${char.note}` : '';
-                // 수치 포맷팅 적용
-                const formattedStat = formatStat(char.stat, char.type);
+                // 표시 옵션 적용
+                const displayHtml = formatCharDisplay(char);
+
                 const html = `
                     <label class="flex items-center justify-between p-3 rounded-lg border dark:border-dark-border cursor-pointer bg-white dark:bg-dark-surface">
-                        <div class="flex items-center gap-3">
-                            <input type="checkbox" name="multi-char-select" value="${char.id}" data-char-type="${char.type}" class="w-4 h-4 accent-primary">
-                            <span class="font-bold text-sm text-primary dark:text-dark-text truncate">${char.name} <span class="text-zinc-400 dark:text-dark-text-muted">${formattedStat}${noteDisplay}</span></span>
+                        <div class="flex items-center gap-3 w-full overflow-hidden">
+                            <input type="checkbox" name="multi-char-select" value="${char.id}" data-char-type="${char.type}" class="w-4 h-4 accent-primary shrink-0">
+                            <span class="text-sm text-primary dark:text-dark-text truncate flex items-center gap-2">${displayHtml}</span>
                         </div>
                     </label>`;
                 char.type === 'dealer' ? dealerHtml += html : bufferHtml += html;
@@ -1122,15 +1237,15 @@
             
             sortedChars.forEach(char => {
                 const isChecked = targetSet && targetSet.charIds.includes(char.id);
-                const noteDisplay = char.note ? ` ${char.note}` : '';
-                // 수치 포맷팅 적용
-                const formattedStat = formatStat(char.stat, char.type);
+                
+                // 표시 옵션 적용
+                const displayHtml = formatCharDisplay(char);
                 
                 const html = `
                     <label class="flex items-center justify-between p-3 rounded-lg border dark:border-dark-border bg-white dark:bg-dark-surface cursor-pointer">
-                        <div class="flex items-center gap-3">
-                            <input type="checkbox" name="set-member-select" value="${char.id}" class="w-4 h-4 accent-blue-600" ${isChecked ? 'checked' : ''}>
-                            <span class="font-bold text-sm text-primary dark:text-dark-text truncate">${char.name} <span class="text-zinc-400 dark:text-dark-text-muted">${formattedStat}${noteDisplay}</span></span>
+                        <div class="flex items-center gap-3 w-full overflow-hidden">
+                            <input type="checkbox" name="set-member-select" value="${char.id}" class="w-4 h-4 accent-blue-600 shrink-0" ${isChecked ? 'checked' : ''}>
+                            <span class="text-sm text-primary dark:text-dark-text truncate flex items-center gap-2">${displayHtml}</span>
                         </div>
                     </label>
                 `;
@@ -1213,25 +1328,20 @@
             // 쉼표 제거
             str = str.replace(/,/g, '');
             
-            // --- 수정된 로직 시작 ---
             // 문자열에서 연속된 숫자들을 모두 추출합니다. 단위("억", "만" 등)는 무시됩니다.
             const numbers = str.match(/\d+/g);
 
             if (numbers) {
                 if (numbers.length >= 2) {
                     // 숫자가 2개 이상 발견되면, 첫 번째 숫자와 두 번째 숫자를 '.'으로 연결하여 하나의 실수로 만듭니다.
-                    // 예: "548 억 729 만" -> ["548", "729"] -> 548.729
-                    // 예: "SomeUnit 123 OtherUnit 456" -> ["123", "456"] -> 123.456
                     return parseFloat(`${numbers[0]}.${numbers[1]}`);
                 } else if (numbers.length === 1) {
                     // 숫자가 1개만 발견되면 정수로 반환합니다. (버퍼 점수 등)
-                    // 예: "6824090" -> ["6824090"] -> 6824090
                     return parseInt(numbers[0], 10);
                 }
             }
-            // --- 수정된 로직 끝 ---
 
-            // Case 4: 소수점이 있는 숫자 형태 (기존 로직 유지)
+            // 소수점이 있는 숫자 형태 (기존 로직 유지)
             if (/^\d+(\.\d+)?$/.test(str)) {
                 return parseFloat(str);
             }
@@ -1265,6 +1375,25 @@
                     let type = 'dealer'; // 기본값
                     let stat = 0;
                     let note = '';
+                    let job = '미정'; // 직업 초기값
+
+                    // 직업 정보 파싱: 캐릭터 이름 줄 위쪽에서 직업명을 찾습니다.
+                    // 이름 줄 위로 최대 10줄까지 거슬러 올라가며 숫자로만 이루어지지 않은 첫 번째 줄을 직업명으로 간주합니다.
+                    for (let k = 1; k <= 10 && i - k >= 0; k++) {
+                        const prevLine = lines[i - k];
+                        // 숫자, 공백, 점, 슬래시로만 이루어진 줄인지 확인 (명성, 수치 등 건너뛰기 위함)
+                        const isNumericLine = /^[\d\s\.\/]+$/.test(prevLine);
+
+                        if (!isNumericLine) {
+                            // '眞', '極' 등의 각성 수식어 제거하여 순수 직업명 추출
+                            job = prevLine.replace(/^(眞|極)\s*/, '').trim();
+                            // 혹시 잘못된 텍스트를 잡았을 경우를 대비한 길이 체크 (일반적인 직업명 길이를 초과하면 초기화)
+                            if (job.length > 15 || job.length === 0) {
+                                 job = '미정';
+                            }
+                            break; // 직업명을 찾았으면 루프 종료
+                        }
+                    }
 
                     // 다음 몇 줄을 검사하여 수치 정보 찾기
                     let j = i + 1;
@@ -1281,7 +1410,6 @@
                             type = 'buffer';
                             stat = parseNumberStr(statLine.replace('버프점수', ''));
                         } 
-                        // --- 수정된 로직 시작 ---
                         // 버퍼 점수 확인 (새로운 방식: "2인" 줄을 발견했을 때)
                         else if (statLine.startsWith('2인')) {
                             // 이 줄이 '2인' 수치임. 버퍼일 가능성 존재.
@@ -1297,13 +1425,8 @@
                                     note = '' + parseNumberStr(statLine.replace('2인', '')).toLocaleString('ko-KR');
                                 }
                             }
-                            // 만약 '4인' 줄이 없다면 이 캐릭터는 무시됨 (stat이 0이므로). 
-                            // 딜러가 '2인' 스탯만 가지는 경우는 없다고 가정.
                         }
-                        // --- 수정된 로직 끝 ---
-
                         // 딜러 확인 (기존 방식)
-                        // 위에서 버퍼 로직에 걸리지 않은 '4인' 줄은 딜러의 수치로 판단
                         else if (statLine.startsWith('4인')) {
                             type = 'dealer';
                             stat = parseNumberStr(statLine.replace('4인', ''));
@@ -1321,7 +1444,7 @@
                     }
 
                     if (stat > 0) {
-                        parsedChars.push({ name: charName, type, stat, note });
+                        parsedChars.push({ name: charName, type, stat, note, job }); // job 포함
                     }
                 }
             }
@@ -1339,7 +1462,6 @@
             const parsedResults = parseDundamText(text);
 
             if (parsedResults.length === 0) {
-                // parseDundamText 내부에서 얼럿을 띄우므로 여기선 리턴만 함
                 return;
             }
 
@@ -1356,6 +1478,7 @@
                     if (updateStat) {
                         state.characters[existingCharIndex].stat = parsedChar.stat;
                         state.characters[existingCharIndex].type = parsedChar.type;
+                        state.characters[existingCharIndex].job = parsedChar.job; // 직업 정보도 업데이트
                         isUpdated = true;
                     }
                     if (updateNote && parsedChar.note) {
@@ -1375,7 +1498,8 @@
                         name: parsedChar.name,
                         stat: parsedChar.stat,
                         type: parsedChar.type,
-                        note: parsedChar.note
+                        note: parsedChar.note,
+                        job: parsedChar.job // 직업 정보 추가
                     });
                     addedCount++;
                 }
@@ -1388,7 +1512,7 @@
         }
         // --- 던담 불러오기 관련 로직 끝 ---
 
-        // --- 수치 포맷팅 헬퍼 함수 수정 ---
+        // --- 수치 포맷팅 헬퍼 함수 ---
         function formatStat(stat, type) {
             if (type === 'dealer') {
                 // 딜러: 선택된 소수점 자릿수만큼 버림 처리
@@ -1404,6 +1528,44 @@
             }
         }
         // ---------------------------------
+
+        // 캐릭터 정보를 텍스트로 포맷팅하는 헬퍼 함수 (복사용)
+        function getCharText(char) {
+            const opts = state.displayOptions;
+            let parts = [];
+
+            if (opts.type) parts.push(char.type === 'dealer' ? '[딜]' : '[벞]');
+            if (opts.name) parts.push(char.name);
+            if (opts.stat) parts.push(formatStat(char.stat, char.type));
+            if (opts.note && char.note) parts.push(`(${char.note})`); // 메모는 괄호로 묶어 구분
+            if (opts.job && char.job) parts.push(char.job);
+
+            return parts.join('');
+        }
+
+        // 세트 내용 클립보드 복사 함수
+        function copySetToClipboard(setId) {
+            const content = state.contents.find(c => c.id === state.activeContentId);
+            if (!content) return;
+            const set = content.sets.find(s => s.id === setId);
+            if (!set) return;
+
+            const setMembers = set.charIds
+                .map(cid => state.characters.find(c => c.id === cid))
+                .filter(c => c); // 존재하는 캐릭터만 필터링
+
+            if (setMembers.length === 0) {
+                alert('복사할 캐릭터가 없습니다.');
+                return;
+            }
+
+            // 각 캐릭터의 정보를 공백 1개로 구분하여 연결
+            const textToCopy = setMembers.map(char => getCharText(char)).join(' ');
+
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => alert('세트 내용이 클립보드에 복사되었습니다.'))
+                .catch(err => alert('복사 실패: ' + err));
+        }
 
 
         // 렌더링 함수들
@@ -1443,22 +1605,29 @@
 
             getSortedCharacters().forEach(char => {
                 const isEditing = state.editingCharId === char.id;
-                const noteDisplay = char.note ? ` ${char.note}` : '';
                 
                 let charHtml = '';
                 if (isEditing) {
                      charHtml = `
                         <div class="p-3 border rounded-lg editing-char-box">
                             <div class="flex flex-col gap-2 mb-2">
-                                <input id="edit-name-${char.id}" type="text" value="${char.name}" class="w-full border dark:border-dark-border rounded px-2 py-1 text-sm font-bold outline-none text-primary dark:text-dark-text bg-white dark:bg-dark-surface">
+                                <!-- 1열: 닉네임, 수치 -->
                                 <div class="flex gap-2">
+                                    <input id="edit-name-${char.id}" type="text" value="${char.name}" class="w-1/2 border dark:border-dark-border rounded px-2 py-1 text-sm font-bold outline-none text-primary dark:text-dark-text bg-white dark:bg-dark-surface" placeholder="닉네임">
                                     <input id="edit-stat-${char.id}" type="number" value="${char.stat}" class="w-1/2 border dark:border-dark-border rounded px-2 py-1 text-xs outline-none text-primary dark:text-dark-text bg-white dark:bg-dark-surface" placeholder="수치">
-                                    <input id="edit-note-${char.id}" type="text" value="${char.note || ''}" class="w-1/2 border dark:border-dark-border rounded px-2 py-1 text-xs outline-none text-primary dark:text-dark-text bg-white dark:bg-dark-surface" placeholder="메모">
                                 </div>
-                                <select id="edit-type-${char.id}" class="w-full border dark:border-dark-border rounded px-2 py-1 text-xs outline-none text-primary dark:text-dark-text bg-white dark:bg-dark-surface">
-                                    <option value="dealer" ${char.type === 'dealer' ? 'selected' : ''}>딜러</option>
-                                    <option value="buffer" ${char.type === 'buffer' ? 'selected' : ''}>버퍼</option>
-                                </select>
+                                <!-- 2열: 직업, 타입(딜벞) -->
+                                <div class="flex gap-2">
+                                    <input id="edit-job-${char.id}" type="text" value="${char.job || ''}" class="w-1/2 border dark:border-dark-border rounded px-2 py-1 text-sm outline-none text-primary dark:text-dark-text bg-white dark:bg-dark-surface" placeholder="직업">
+                                    <select id="edit-type-${char.id}" class="w-1/2 border dark:border-dark-border rounded px-2 py-1 text-xs outline-none text-primary dark:text-dark-text bg-white dark:bg-dark-surface">
+                                        <option value="dealer" ${char.type === 'dealer' ? 'selected' : ''}>딜러</option>
+                                        <option value="buffer" ${char.type === 'buffer' ? 'selected' : ''}>버퍼</option>
+                                    </select>
+                                </div>
+                                <!-- 3열: 메모 -->
+                                <div>
+                                    <input id="edit-note-${char.id}" type="text" value="${char.note || ''}" class="w-full border dark:border-dark-border rounded px-2 py-1 text-xs outline-none text-primary dark:text-dark-text bg-white dark:bg-dark-surface" placeholder="메모">
+                                </div>
                             </div>
                             <div class="flex gap-1">
                                 <button onclick="submitInlineEdit('${char.id}')" class="flex-1 bg-primary dark:bg-zinc-700 text-white text-[10px] py-1 rounded hover:bg-primary-hover dark:hover:bg-zinc-600 transition-colors">저장</button>
@@ -1467,13 +1636,14 @@
                         </div>
                     `;
                 } else {
-                    // 수치 포맷팅 적용
-                    const formattedStat = formatStat(char.stat, char.type);
+                    // ... (기존 보기 모드 코드는 동일)
+                    // 표시 옵션 적용
+                    const displayHtml = formatCharDisplay(char);
+
                     charHtml = `
                         <div class="flex flex-col p-3 border dark:border-dark-border rounded-lg bg-white dark:bg-dark-surface hover:border-zinc-300 dark:hover:border-zinc-500 transition-colors group relative border-f4f4f5">
-                            <div class="flex items-center gap-1.5 overflow-hidden text-sm font-bold">
-                                <span class="truncate text-primary dark:text-dark-text">${char.name}</span>
-                                <span class="text-zinc-400 dark:text-dark-text-muted">${formattedStat}${noteDisplay}</span>
+                            <div class="flex items-center gap-1.5 overflow-hidden text-sm text-primary dark:text-dark-text">
+                                ${displayHtml}
                             </div>
                             <div class="absolute top-2 right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-dark-surface pl-1 rounded-bl-lg hover-actions">
                                 <button onclick="startInlineEdit('${char.id}')" class="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded text-zinc-400 dark:text-zinc-500 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
@@ -1553,42 +1723,50 @@
                         const char = state.characters.find(c => c.id === m.charId);
                         if(!char) return '';
 
-                        const typePrefix = char.type === 'dealer' 
-                            ? '<span class="text-zinc-400 dark:text-dark-text-muted mr-0.5 font-medium">(딜)</span>' 
-                            : '<span class="text-emerald-500 dark:text-emerald-400 mr-0.5 font-medium">(벞)</span>';
+                        // 표시 옵션 적용 (세트 내 멤버)
+                        const displayHtml = formatCharDisplay(char);
 
-                        const clearedClass = m.isCleared ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' : 'bg-white dark:bg-dark-surface shadow-sm border-zinc-100 dark:border-dark-border';
-                        const noteDisplay = char.note ? ` ${char.note}` : '';
-                        // 수치 포맷팅 적용
-                        const formattedStat = formatStat(char.stat, char.type);
-
+                        const clearedClass = m.isCleared ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' : 'bg-white dark:bg-dark-surface shadow-sm border-zinc-100 dark:border-dark-border text-primary dark:text-dark-text';
+                        
                         return `
-                            <div class="flex items-center justify-center gap-1.5 p-2 rounded border ${clearedClass} text-sm font-bold">
-                                <span class="truncate ${m.isCleared ? '' : 'text-primary dark:text-dark-text'}">${typePrefix}${char.name}</span>
-                                <span class="${m.isCleared ? 'text-emerald-600 dark:text-emerald-300' : 'text-zinc-400 dark:text-dark-text-muted'}">${formattedStat}${noteDisplay}</span>
+                            <div class="flex items-center justify-center gap-1.5 p-2 rounded border ${clearedClass} text-sm">
+                                ${displayHtml}
                             </div>
                         `;
                     }).join('');
 
                     const setNameHtml = `<h4 class="font-bold text-sm text-primary dark:text-dark-text">${set.name}</h4>`;
 
-                    let actionButtons = '';
+                    let actionButtonsGroup = '';
                     if (state.isEditMode) {
-                        actionButtons = `
-                            <button onclick="event.stopPropagation(); openSetModal('${set.id}')" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-bold text-xs bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded mr-1 transition-colors">수정</button>
-                            <button onclick="event.stopPropagation(); deleteSet('${set.id}')" class="text-red-400 hover:text-red-600 dark:text-red-300 dark:hover:text-red-500 font-bold text-xs bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded transition-colors">삭제</button>
+                        actionButtonsGroup = `
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button onclick="event.stopPropagation(); openSetModal('${set.id}')" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-bold text-xs bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded transition-colors">수정</button>
+                                <button onclick="event.stopPropagation(); deleteSet('${set.id}')" class="text-red-400 hover:text-red-600 dark:text-red-300 dark:hover:text-red-500 font-bold text-xs bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded transition-colors">삭제</button>
+                            </div>
                         `;
-                    } else if (allCleared) {
-                        actionButtons = '<span class="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded">ALL CLEAR</span>';
+                    } else {
+                        // 복사 버튼 추가 (수정 모드가 아닐 때만 표시)
+                        const copyBtn = `
+                            <button onclick="event.stopPropagation(); copySetToClipboard('${set.id}')" class="text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 p-1.5 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors mr-2 shrink-0" title="세트 내용 복사">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                            </button>
+                        `;
+                        const allClearBadge = allCleared ? '<span class="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded shrink-0">ALL CLEAR</span>' : '';
+                        
+                        actionButtonsGroup = `
+                            <div class="flex items-center">
+                                ${copyBtn}
+                                ${allClearBadge}
+                            </div>
+                        `;
                     }
 
                     setsHtml += `
                         <div class="${setCardClass}" ${onClickAttr}>
                             <div class="flex justify-between items-center mb-3 gap-2">
                                 ${setNameHtml}
-                                <div class="flex items-center gap-2 shrink-0">
-                                    ${actionButtons}
-                                </div>
+                                ${actionButtonsGroup}
                             </div>
                             <div class="flex flex-wrap gap-1.5">
                                 ${membersHtml || '<span class="w-full text-xs text-zinc-400 dark:text-dark-text-muted italic text-center py-2">멤버 없음</span>'}
@@ -1608,15 +1786,14 @@
             ccList.forEach(item => {
                 const { char, isCleared } = item;
                 const charCardClass = `char-card card p-4 flex items-center justify-between shadow-sm bg-white dark:bg-dark-surface border-f4f4f5 dark:border-dark-border ${isCleared ? 'cleared' : ''} ${state.isEditMode ? 'border-dashed border-zinc-300 dark:border-zinc-500' : 'border'}`;
-                const noteDisplay = char.note ? ` ${char.note}` : '';
-                // 수치 포맷팅 적용
-                const formattedStat = formatStat(char.stat, char.type);
+                
+                // 표시 옵션 적용
+                const displayHtml = formatCharDisplay(char);
 
                 const charHtml = `
                     <div class="${charCardClass}" onclick="toggleCharClear('${char.id}')">
-                        <div class="flex items-center gap-2 overflow-hidden text-base font-bold">
-                            <span class="truncate ${isCleared ? '' : 'text-primary dark:text-dark-text'}">${char.name}</span>
-                            <span class="${isCleared ? 'text-emerald-600 dark:text-emerald-300' : 'text-zinc-400 dark:text-dark-text-muted'}">${formattedStat}${noteDisplay}</span>
+                        <div class="flex items-center gap-2 overflow-hidden text-base ${isCleared ? 'text-emerald-700 dark:text-emerald-300' : 'text-primary dark:text-dark-text'}">
+                            ${displayHtml}
                         </div>
                         <div class="flex items-center gap-2">
                             ${state.isEditMode ? `
