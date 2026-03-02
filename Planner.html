@@ -445,6 +445,12 @@ input[type=number] {
                          <span class="text-sm text-zinc-500 dark:text-dark-text-muted ml-1">pt</span>
                     </div>
                     <button onclick="clearNotepad()" class="text-xs font-bold text-red-500 hover:text-red-700 dark:hover:text-red-400 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">비우기</button>
+                    
+                    <!-- 크기 초기화 버튼 추가 -->
+                    <button onclick="resetNotepadSize()" class="text-zinc-400 hover:text-primary dark:hover:text-dark-text p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-colors" title="크기 및 위치 초기화">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    </button>
+
                     <button onclick="toggleNotepad()" class="text-zinc-400 hover:text-primary dark:hover:text-dark-text p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
@@ -601,6 +607,19 @@ input[type=number] {
              notepadModal.style.top = `${(window.innerHeight - rect.height) / 2}px`;
              notepadModal.style.left = `${(window.innerWidth - rect.width) / 2}px`;
              notepadModal.style.transform = 'none'; // 기존 중앙 정렬 CSS 해제
+        }
+        
+        // 메모장 크기 및 위치 초기화 함수 추가
+        function resetNotepadSize() {
+            // 기본 크기로 설정 (CSS에 정의된 초기값 참조: w-500px, h-600px)
+            notepadModal.style.width = '500px';
+            notepadModal.style.height = '600px';
+            
+            // 위치도 중앙으로 초기화하여 화면 밖으로 나간 경우를 대비
+            centerNotepad();
+            
+            // 변경된 상태 저장
+            saveNotepadState();
         }
 
 
@@ -1800,7 +1819,7 @@ input[type=number] {
                 // 표시 옵션 적용
                 const displayHtml = formatCharDisplay(char);
 
-                const charHtml = `
+                charHtml = `
                     <div class="${charCardClass}" onclick="toggleCharClear('${char.id}')">
                         <div class="flex items-center gap-2 overflow-hidden text-base ${isCleared ? 'text-emerald-700 dark:text-emerald-300' : 'text-primary dark:text-dark-text'}">
                             ${displayHtml}
