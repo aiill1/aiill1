@@ -1810,7 +1810,10 @@ input[type=number] {
 
             let dealerGridHtml = '';
             let bufferGridHtml = '';
-            const ccList = content.contentCharacters.map(cc => ({ ...cc, char: state.characters.find(c => c.id === cc.charId) })).filter(i => i.char);
+            const ccList = content.contentCharacters
+                .map(cc => ({ ...cc, char: state.characters.find(c => c.id === cc.charId) }))
+                .filter(i => i.char)
+                .sort((a, b) => b.char.stat - a.char.stat); // 내림차순 정렬
 
             ccList.forEach(item => {
                 const { char, isCleared } = item;
