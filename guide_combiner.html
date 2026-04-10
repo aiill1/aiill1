@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>공격대 파티 자동 조합기 사용 가이드</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .guide-container {
+            width: 95%; max-width: 1400px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+			text-align: center;
+        }
+        h1 { border-bottom: 2px solid #2c3e50; padding-bottom: 10px; font-size: 24px; }
+        h2 { font-size: 18px; margin-top: 30px; color: #1a252f; }
+        .content-item { margin-bottom: 40px; }
+        .content-item p { margin-bottom: 15px; font-weight: 500; }
+        img, video {
+    max-width: 100%; 
+    width: auto;      
+    height: auto;
+
+    display: block;
+    margin: 0 auto 20px auto; 
+
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+        .footer { text-align: center; margin-top: 50px; color: #7f8c8d; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="guide-container">
+        <h1>파티 조합기 사용 가이드</h1>
+        <div class="content-item">
+            <h2>1. 데이터 입력</h2>
+            <p>엑셀 혹은 사이트 내의 메모장에서 데이터를 복사하여 입력창에 붙여넣습니다.<br><br>조합기는 '모험단'을 기준으로 사용자들을 구분합니다.<br>닉네임은 구분을 편하게 하기 위해 존재하지만, 형식 상 반드시 입력해야하며 중복또한 가능합니다.</p>
+            <img src="combiner_step1.png" alt="입력 예시">
+			<p>또한 세트 구분과 직업명 등의 주석을 달 수 있습니다.<br>(세트는 '수치 앞'에 기입하여 각 파티에 1캐릭터만 배치되게 합니다. 직업명 등 주석은 '수치 뒤'에 기입하여 파티 조합 결과에 표시할 수 있습니다.)<br><br>예:무리190넨마</p>
+			<img src="combiner_comment1.png" alt="세트 예시">
+			<p>파티 조합결과에 다음과 같이 표시됩니다.</p>
+        </div>
+
+        <div class="content-item">
+            <h2>2. 분배 모드 설정</h2>
+            <p>균등 분배 또는 몰빵 분배를 선택할 수 있습니다.<br><br>'균등 분배'는 각 공대별 모든 파티가 가능한 균등한 딜*버프력 수치로 분배합니다.<br>'몰빵 분배'는 각 공대마다 1파티만을 기준으로 가장 딜*버프력 수치가 높게 분배하며, 2/3파티는 나머지 파티 구성에 따라 분배합니다.</p>
+            
+        </div>
+
+        <div class="content-item">
+            <h2>3. 국룰 파티 조합</h2>
+            <p>체크박스를 통해 파티 배치 방식을 조정할 수 있습니다.<br>체크 해제 시, 딜러의 순서와 상관없이 최대한 균등하게 배치합니다.<br><br>체크 시, 흔히 알려진 방식대로 파티를 조합합니다(버퍼 1234, 메인딜 4321 순서)</p>
+            <img src="combiner_comment2.png" alt="파티 조합">
+			<p>혼합:1~2번은 업둥이1, 3~4번은 업둥이2 먼저 배치합니다<br>정순:업둥이1을 먼저 배치합니다 | 역순:업둥이2를 먼저 배치합니다<br>(딜러의 수치에 따라 딜러를 구분합니다(메인딜>업둥이1>업둥이2)</p>
+        </div>
+
+        <div class="content-item">
+            <h2>4. 업둥버퍼</h2>
+            <img src="combiner_comment3.png" alt="업둥버퍼">
+			<p>인식값: 해당 수치보다 높으면 업둥버퍼로 인식하며, 고정값|버프력 비례로 딜러로 치환합니다.<br><br>고정값: 모든 업둥버퍼는 치환값의 딜러로 치환됩니다.<br>버프력 비례 배율: 버프력에 배율을 곱하여 딜러로 치환됩니다.<br>(예:40000버퍼 x 0.05 = 2000딜러로 치환)</p>
+        </div>
+
+		<div class="content-item">
+            <h2>5. 조합 방식</h2>
+            <p>최저값: 조합 중 가장 약한 파티의 값이 가장 높은 결과(파티딜이 다소 편차가 클 수 있습니다.)<br>표준편차: 조합 중 파티의 평균 표준편차가 가장 적은 결과(파티들의 딜이 균등합니다.)</p>
+            <img src="combiner_comment4.png" alt="조합 방식">
+        </div>
+		
+        <div class="content-item">
+            <h2>6. 메모장 기능</h2>
+            <p>엑셀 표를 켜기 번거롭다면, 메모장에서 입력 후 그대로 복사하여 붙여넣기해서 사용할 수 있습니다.</p>
+        </div>
+		
+		<div class="content-item">
+            <h2>7. 조합 결과</h2>
+			<p>파티 및 사용자를 클릭하여 하단의 '위로'과 '아래로'로 순서를 바꿀 수 있습니다.<br>결과를 복사하여 텍스트만을 추출하여 엑셀에 용이하게 붙여넣을 수 있습니다.</p>
+			<img src="combiner_comment5.png" alt="조합 결과">
+        </div>
+
+        <div class="content-item">
+            <h2>6. 시연 영상</h2>
+            <p>전체적인 사용 흐름을 영상으로 확인하세요.</p>
+            <video controls>
+                <source src="combiner_guide.mp4" type="video/mp4">
+                브라우저가 동영상을 지원하지 않습니다.
+            </video>
+        </div>
+
+        <div class="footer">
+            &copy; 2026 카인서버 미제레. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>
