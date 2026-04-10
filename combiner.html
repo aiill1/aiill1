@@ -710,16 +710,22 @@
             </a>
         </div>
         <!-- ▲▲▲ 여기까지 ▲▲▲ -->
-        <header>
-            <h1>공격대 파티 자동 조합기</h1>
-             <div class="theme-switch-wrapper">
-                 <span class="theme-label">Dark Mode</span>
-                 <label class="theme-switch" for="darkModeToggle">
-                     <input type="checkbox" id="darkModeToggle" />
-                     <div class="slider"></div>
-                 </label>
-             </div>
-        </header>
+<header>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <h1>공격대 파티 자동 조합기</h1>
+        <button onclick="window.open('guide_combiner.html', '_blank', 'width=800,height=900,scrollbars=yes')" 
+                style="width: auto; margin-top: 0; padding: 8px 15px; font-size: 14px; background-color: var(--primary-color); border-radius: 4px;">
+            사용 가이드
+        </button>
+    </div>
+    <div class="theme-switch-wrapper">
+        <span class="theme-label">Dark Mode</span>
+        <label class="theme-switch" for="darkModeToggle">
+            <input type="checkbox" id="darkModeToggle" />
+            <div class="slider"></div>
+        </label>
+    </div>
+</header>
 
         <div class="content-wrapper">
             <!-- Left Panel: Input -->
@@ -2756,6 +2762,6 @@ function copyResultsToClipboard() {
             }
         }
     </script>
+
 </body>
 </html>
-
