@@ -1580,10 +1580,11 @@ input[type=number] {
             if (!set) return;
 
             const setMembers = set.charIds
-                .map(cid => state.characters.find(c => c.id === cid))
-                .filter(c => c); // 존재하는 캐릭터만 필터링
+        .map(cid => state.characters.find(c => c.id === cid))
+        .filter(c => c) // 존재하는 캐릭터만 필터링
+        .sort((a, b) => b.stat - a.stat); // 수치 내림차순 정렬 추가
 
-            if (setMembers.length === 0) {
+    if (setMembers.length === 0) {
                 alert('복사할 캐릭터가 없습니다.');
                 return;
             }
@@ -1742,9 +1743,15 @@ input[type=number] {
 
             let setsHtml = '';
             if (content.sets && content.sets.length > 0) {
-                content.sets.forEach(set => {
-                    const members = content.contentCharacters.filter(cc => set.charIds.includes(cc.charId));
-                    const allCleared = members.length > 0 && members.every(m => m.isCleared);
+    content.sets.forEach(set => {
+        const members = content.contentCharacters
+            .filter(cc => set.charIds.includes(cc.charId))
+            .sort((a, b) => {
+                const charA = state.characters.find(c => c.id === a.charId);
+                const charB = state.characters.find(c => c.id === b.charId);
+                return (charB ? charB.stat : 0) - (charA ? charA.stat : 0); // 수치 내림차순 정렬
+            });
+        const allCleared = members.length > 0 && members.every(m => m.isCleared);
                     const setCardClass = `set-card p-4 transition-colors cursor-pointer relative bg-fafafa dark:bg-dark-surface border-e4e4e7 dark:border-dark-border ${allCleared ? 'cleared' : ''} ${state.isEditMode ? 'border-dashed border-zinc-400 dark:border-zinc-500' : 'border'}`;
                     const onClickAttr = !state.isEditMode ? `onclick="toggleSetClear('${set.id}')"` : '';
 
